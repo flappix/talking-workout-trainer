@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Talking Workout Trainer</title>
+		<script defer src="alpine.min.js"></script>
+		<script src="Speakit1.0.1.min.js"></script>
+		<script src="howler.min.js"></script>
+		<script src="demo_workouts.js"></script>
+		<script src="app.js"></script>
+		<style>
+			body {
+				font-family: Arial;
+				font-size: 2rem;
+				background-color: #E4E4E4;
+				height: 100vh;
+			}
+			
+			table {
+				width: 100%;
+				font-size: 4rem;
+			}
+			
+			table tr {
+				background-color: #D8D8D8;
+			}
+			
+			box {
+				display: block;
+				background-color: white;
+				border: 1px solid black;
+				border-radius: 5px;
+				padding: 0.5rem;
+			}
+			
+			navigation {
+				display: flex;
+				height: 20%;
+			}
+			
+			navigation button  {
+				flex: 1;
+			}
+			
+			run_panel {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: space-between;
+				height: 70%;
+				padding: 1rem;
+			}
+			
+			button {
+				cursor: pointer;
+			}
+			
+			button, label, input {
+				border-radius: 0.5rem;
+				margin: 0.5rem;
+				padding: 1rem;
+				font-size: 4rem;
+			}
+			
+			select {
+				font-size: 2rem;
+			}
+			
+			input[type=text] {
+				width: 50vw;
+			}
+			
+			input[type=radio] {
+				width: 3rem;
+				height: 3rem;
+			}
+			
+			input[type=number] {
+				width: 20vw;
+			}
+			
+			label {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				border: 1px solid black;
+				border-radius: 5px;
+				padding: 0.5rem;
+			}
+			
+			exercise_timer {
+				font-size: 4rem;
+				text-align: center;
+				width: 20vh;
+				height: 20vh;
+				display: flex;
+				align-items: center;
+				justify-content: space-around;
+				position: relative;
+				background-color: white;
+				border-radius: 50%;
+			}
+			
+			workout_timer {
+				font-size: 4rem;
+				text-align: center;
+				width: 24vh;
+				height: 24vh;
+				display: flex;
+				align-items: center;
+				justify-content: space-around;
+				position: relative;
+			}
+			
+			h1, h2, h3 {
+				text-align: center;
+				margin: 0;
+				padding: 0;
+			}
+			
+			h2 {
+				font-size: 5rem;
+			}
+			
+			h3 {
+				font-size: 4rem;
+			}
+
+			@keyframes prixClipFix_exercise {
+				0%   {clip-path:polygon(50% 50%,0 0,0 0,0 0,0 0,0 0)}
+				25%  {clip-path:polygon(50% 50%,0 0,100% 0,100% 0,100% 0,100% 0)}
+				50%  {clip-path:polygon(50% 50%,0 0,100% 0,100% 100%,100% 100%,100% 100%)}
+				75%  {clip-path:polygon(50% 50%,0 0,100% 0,100% 100%,0 100%,0 100%)}
+				100% {clip-path:polygon(50% 50%,0 0,100% 0,100% 100%,0 100%,0 0)}
+			}
+			
+			@keyframes prixClipFix_workout {
+				0%   {clip-path:polygon(50% 50%,0 0,0 0,0 0,0 0,0 0)}
+				25%  {clip-path:polygon(50% 50%,0 0,100% 0,100% 0,100% 0,100% 0)}
+				50%  {clip-path:polygon(50% 50%,0 0,100% 0,100% 100%,100% 100%,100% 100%)}
+				75%  {clip-path:polygon(50% 50%,0 0,100% 0,100% 100%,0 100%,0 100%)}
+				100% {clip-path:polygon(50% 50%,0 0,100% 0,100% 100%,0 100%,0 0)}
+			}
+		</style>
+		
+		<!-- exercise timer animation: document.styleSheets[1] -->
+		<style>
+		</style>
+		
+		<!-- workout timer animation: document.styleSheets[2] -->
+		<style>
+		</style>
+	</head>
+
+	<body x-data="App()">
+		<template x-if="state != 'not_init'">
+			<div>
+				<navigation>
+					<button @click="stop_workout(); panel = 'create'; curr_workout = null;" x-show="panel != 'create'">+ workout</button>
+					<button @click="stop_workout(); temp_workout = get_curr_workout(); panel = 'edit';" x-show="panel != 'edit'">Edit workout</button>
+					<button @click="stop_workout(); panel = 'load';" x-show="panel != 'load'">Load workout</button>
+				</navigation>
+				<template x-if="panel == 'load'">
+					<box>
+						<h3>Load workout</h3>
+						<table>
+							<template x-for="(workout, w) in workouts" :key="w">
+								<tr>
+									<td style="padding: 0.5rem; cursor: pointer;" x-html="workout.name" @click="load_workout (w)"></td>
+									<td>
+										<span style="background-color: #AFAFAF; border-radius: 20px; font-size: 3rem; padding: 0.5rem; font-family: Monospace;" x-html="secondsToTime ( Math.floor ( getWorkoutDuration (workout) / 1000 ) )"></span>
+									</td>
+									<td>
+										<button @click="workouts.splice (w, 1); if (curr_workout == w) { curr_workout--; }; store();" :disabled="workouts.length < 2">&#128465;</button>
+									</td>
+									<td x-data="{shared: false}" style="display: flex; flex-direction: column;">
+										<button x-show="!shared" @click="shared = true;">Share</button>
+										<button x-show="shared" @click="$refs.share_link.select(); document.execCommand ('copy')">Copy link</button>
+										<input x-ref="share_link" style="width: 20vw;" type="text" x-show="shared" :value="window.location.href.split('?')[0] + '?share_workout=' + encodeURIComponent ( JSON.stringify (workout) )">
+										
+									</td>
+								</tr>
+							</template>
+						</table>
+					</box>
+				</template>
+				<template x-if="panel == 'create' || panel == 'edit'">
+					<div>
+						<box>
+							<label>
+								Workout name
+								<input type="text" x-model="temp_workout.name" />
+							</label>
+							
+							<label>
+								Work period
+								<input type="number" x-model="temp_workout.settings.work_period" />
+								sec
+							</label>
+							
+							<label>
+								<span :style="{'text-decoration': temp_workout.settings.rest_period == 0 ? 'line-through' : 'none'}">Rest period</span>
+								<input type="number" x-model="temp_workout.settings.rest_period" />
+								sec
+							</label>
+							
+							<div x-data="{show: false}">
+								<button @click="show = !show"><span x-html="show ? 'Hide' : 'Show'"></span> advanced settings</button>
+								<div x-show="show">
+									<label>
+										<span :style="{'text-decoration': temp_workout.settings.count_down == 0 ? 'line-through' : 'none'}">Countdown</span>
+										<input type="number" x-model="temp_workout.settings.count_down" />
+										sec
+									</label>
+									<label>
+										<span :style="{'text-decoration': temp_workout.settings.count_down == 0 ? 'line-through' : 'none'}">Pre-delay</span>
+										<input type="number" x-model="temp_workout.settings.pre_delay" />
+										sec
+									</label>
+									<label>
+										Speaker
+										<select x-model="temp_workout.settings.voice">
+											<template x-for="(voice, v) in voices" :key="v">
+												<option :value="voice.name" x-html="`${voice.name} (${voice.lang})`" :selected="get_voice (temp_workout.settings.voice) == v"></option>
+											</template>
+										</select>
+									</label>
+								</div>
+							</div>
+						</box>
+						
+						<h3 style="margin-top: 4rem;">Exercises</h3>
+						<template x-for="(exercise, e) in temp_workout.exercises" :key="e">
+							<box style="margin: 0.5rem 0 0.5rem 0;">
+								<div style="display: flex; justify-content: end;">
+									<button @click="if (e > 0) {[temp_workout.exercises[e - 1], temp_workout.exercises[e]] = [temp_workout.exercises[e], temp_workout.exercises[e - 1]]; }"
+											:disabled="e <= 0">&#8593;</button>
+									<button @click="if (e < temp_workout.exercises.length - 1) { [temp_workout.exercises[e + 1], temp_workout.exercises[e]] = [temp_workout.exercises[e], temp_workout.exercises[e + 1]]; }"
+											:disabled="e >= temp_workout.exercises.length - 1">&#8595;</button>
+									<button @click="temp_workout.exercises.splice (e, 1)">&#128465;</button>
+								</div>
+								<label>
+									Exercise name
+									<input type="text" x-model="exercise.name" />
+								</label>
+								
+								<div x-data="{show: false}">
+									<button @click="show = !show"><span x-html="show ? 'Hide' : 'Show'"></span> settings</button>
+									<button @click="readText (exercise.name, temp_workout)">&#9654; Play</button>
+									<div x-show="show">
+										<div>
+											<label style="justify-content: start;">
+												<input type="radio" @click="exercise.work_period = 'default'" :checked="exercise.work_period == 'default'" />
+												Use default work period
+											</label>
+											<label style="justify-content: start;">
+												<input type="radio" @click="exercise.work_period = temp_workout.settings.work_period;" :checked="exercise.work_period != 'default'" />
+												Use custom work period
+												
+												<template x-if="exercise.work_period != 'default'">
+													<div>
+														<input type="number" x-model="exercise.work_period" />
+														sec
+													</div>
+												</template>
+											</label>
+										</div>
+										
+										<div>
+											<label style="justify-content: start;">
+												<input type="radio" @click="exercise.rest_period = 'default'" :checked="exercise.rest_period == 'default'" />
+												Use default rest period
+											</label>
+											<label style="justify-content: start;">
+												<input type="radio" @click="exercise.rest_period = temp_workout.settings.rest_period;" :checked="exercise.rest_period != 'default'" />
+												Use custom rest period
+												
+												<template x-if="exercise.rest_period != 'default'">
+													<div>
+														<input type="number" x-model="exercise.rest_period" />
+														sec
+													</div>
+												</template>
+											</label>
+										</div>
+									</div>
+								</div>
+							</box>
+						</template>
+						<div style="display: flex; justify-content: space-between;">
+							<button @click="temp_workout.exercises.push ({name: '', work_period: 'default', rest_period: 'default'})">+ exercise</button>
+							<button @click="save_workout()" :disabled="temp_workout.name == '' || temp_workout.exercises.length == 0">Save</button>
+						</div>
+						
+						<template x-if="temp_workout.name == ''"><div>Enter workout name</div></template>
+						<template x-if="temp_workout.exercises.length == 0"><div>Add at least one exercise</div></template>
+					</div>
+				</template>
+				
+				<template x-if="panel == 'run'">
+					<run_panel>
+						<h2 x-html="get_curr_workout().name"></h2>
+						<div style="flex-direction: column; align-items: center;" :style="{display: is_running() ? 'flex' : 'none'}">
+							<template x-if="state =='running' && curr_exercise.period == 'work'">
+								<h3 x-html="get_curr_workout().exercises[curr_exercise.exercise].name"></h3>
+							</template>
+							<template x-if="state =='pre_delay' && curr_exercise.period == 'work'">
+								<h3>Get ready</h3>
+							</template>
+							<template x-if="curr_exercise.period == 'rest'">
+								<h3>Rest</h3>
+							</template>
+							<workout_timer id="workout_timer">
+								<exercise_timer id="exercise_timer" x-html="Math.round (curr_exercise.remaining_time / 1000)"></exercise_timer>
+							</workout_timer>
+							<template x-if="get_curr_workout().exercises.length - 1 > curr_exercise.exercise">
+								<div style="text-align: center; font-size: 3rem;">
+									Next exercise: <span x-html="get_curr_workout().exercises[curr_exercise.exercise + (state == 'pre_delay' ? 0 : 1)].name"></span>
+								</div>
+							</template>
+							<template x-if="get_curr_workout().exercises.length - 1 <= curr_exercise.exercise">
+								<div style="text-align: center; font-size: 3rem;">
+									Last exercise
+								</div>
+							</template>
+						</div>
+						<template x-if="state == 'finished'">
+							<h3>Finished</h3>
+						</template>
+						
+						<div style="display: flex;">
+							<button @click="start_workout()" x-show="!is_running()">Start</button>
+							<button @click="pause_workout()" x-show="is_running()" x-html="pause ? 'Continue' : 'Pause'"></button>
+							<button @click="quit_workout()" x-show="is_running()">Quit</button>
+						</div>
+					</run_panel>
+				</template>
+			</div>
+		</template>
+	</body>
+
+</html>
