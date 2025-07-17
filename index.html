@@ -167,7 +167,7 @@
 							<template x-for="(workout, w) in workouts" :key="w">
 								<tr>
 									<td style="padding: 0.5rem; cursor: pointer;" x-html="workout.name" @click="load_workout (w)"></td>
-									<td>
+									<td style="display: flex; align-items: center; justify-content: center;">
 										<span style="background-color: #AFAFAF; border-radius: 20px; font-size: 3rem; padding: 0.5rem; font-family: Monospace;" x-html="secondsToTime ( Math.floor ( getWorkoutDuration (workout) / 1000 ) )"></span>
 									</td>
 									<td>
