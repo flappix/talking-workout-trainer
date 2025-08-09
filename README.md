@@ -1,5 +1,5 @@
 # talking-workout-trainer
-Interval timer which announce every exercises with an audio signal
+Interval timer which announces every exercises with an audio signal
 
 **Try it on https://flappix.github.io/talking-workout-trainer**
 
@@ -8,7 +8,7 @@ Interval timer which announce every exercises with an audio signal
 ## Features
 
 - Custom workouts
-- Audio prompts
+- Voice prompts
   - different voices (browser dependent)
 - Customizable work and rest time
   - per workout
