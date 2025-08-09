@@ -97,6 +97,13 @@ function App() {
 				exercises: [],
 			};
 		},
+		add_exercise: function() {
+			this.temp_workout.exercises.push ({name: '', work_period: 'default', rest_period: 'default'});
+			setTimeout ( () => {
+				window.scrollTo(0, document.body.scrollHeight);
+				document.getElementById (`exercise_name_${this.temp_workout.exercises.length - 1}`).focus();
+			}, 200 );
+		},
 		save_workout: function() {
 			// overwrite current workout
 			if (this.curr_workout != null) {
@@ -111,6 +118,13 @@ function App() {
 			this.store();
 			this.reset_temp_workout();
 			this.panel = 'run';
+		},
+		cancel_edit_workout: function() {
+			if ( confirm ('Are you sure you want to exit the workout editor? Your workout will not be saved') ) {
+				this.reset_temp_workout();
+				this.curr_workout = 0;
+				this.panel = 'run';
+			}
 		},
 		temp_workout: null,
 			
@@ -144,15 +158,20 @@ function App() {
 				let curr_workout = this.get_curr_workout();
 				this.curr_exercise.remaining_time -= time_diff;
 				
+				// countdown
 				if (this.curr_exercise.remaining_time <= (curr_workout.settings.count_down * 1000) && this.curr_exercise.remaining_time > 0) {
-					this.beep1.play()
+					//this.beep1.play()
+					console.log (curr_workout.settings.count_down * 1000, this.curr_exercise.remaining_time);
+					let count_down = (curr_workout.settings.count_down * 1000);
+					this.readText ( Math.round (this.curr_exercise.remaining_time / 1000) );
 				}
 				
 				if (this.curr_exercise.remaining_time <= 0) {
 					
 					if (this.state == 'pre_delay') {
 						this.curr_exercise.period = 'work';
-						this.beep2.play();
+						//this.beep2.play();
+						this.readText ('go!');
 						this.state = 'running';
 						this.curr_exercise.remaining_time = this.get_work_period();
 						this.update_progressbar ('exercise', this.curr_exercise.remaining_time);
@@ -162,7 +181,7 @@ function App() {
 					}
 					else if (this.curr_exercise.period == 'work' && curr_workout.exercises.length - 1 > this.curr_exercise.exercise) {
 						this.curr_exercise.period = 'rest';
-						this.beep2.play();
+						//this.beep2.play();
 						
 						this.readText ('Rest').then ( () => {
 							let next_speak = () => this.readText ('Next exercise: ' + curr_workout.exercises[this.curr_exercise.exercise + 1].name);
@@ -184,13 +203,14 @@ function App() {
 						
 						if (curr_workout.exercises.length - 1 > this.curr_exercise.exercise) {
 							this.curr_exercise.exercise++;
-							this.beep2.play();
+							//this.beep2.play();
+							this.readText ('go!');
 							this.readText (curr_workout.exercises[this.curr_exercise.exercise].name);
 							this.curr_exercise.remaining_time = this.get_work_period();
 							this.update_progressbar ('exercise', this.curr_exercise.remaining_time);
 						}
 						else {
-							this.beep2.play();
+							//this.beep2.play();
 							this.readText ('Workout finished');
 							this.state = 'finished';
 							this.stop_animation ('exercise');
