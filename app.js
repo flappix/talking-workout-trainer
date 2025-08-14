@@ -41,15 +41,16 @@ function App() {
 				
 				
 				this.beep1 = new Howl({
-					src: ['beep1.wav'],
+					src: ['resources/beep1.wav'],
 					html5: true
 				});
 				this.beep2 = new Howl({
-					src: ['beep2.wav'],
+					src: ['resources/beep2.wav'],
 					html5: true
 				});
 				
 				this.state = 'not_started';
+				this.nosleep = new NoSleep();
 			});
 		},
 		find_best_voice: function() {
@@ -133,6 +134,13 @@ function App() {
 		get_curr_workout: function() {
 			return this.workouts[this.curr_workout];
 		},
+		get_exercises: function() {
+			if (this.shuffle) {
+				return this.get_curr_workout().shuffle_exercises;
+			}
+			// else
+			return this.get_curr_workout().exercises;
+		},
 		state: 'not_init',
 		last_time: null,
 		run: function() {
@@ -156,12 +164,12 @@ function App() {
 			if (!this.pause) {
 			
 				let curr_workout = this.get_curr_workout();
+				let exercises = this.get_exercises();
 				this.curr_exercise.remaining_time -= time_diff;
 				
 				// countdown
 				if (this.curr_exercise.remaining_time <= (curr_workout.settings.count_down * 1000) && this.curr_exercise.remaining_time > 0) {
 					//this.beep1.play()
-					console.log (curr_workout.settings.count_down * 1000, this.curr_exercise.remaining_time);
 					let count_down = (curr_workout.settings.count_down * 1000);
 					this.readText ( Math.round (this.curr_exercise.remaining_time / 1000) );
 				}
@@ -177,14 +185,14 @@ function App() {
 						this.update_progressbar ('exercise', this.curr_exercise.remaining_time);
 						this.update_progressbar ( 'workout', this.getWorkoutDuration (curr_workout) );
 						
-						this.readText (curr_workout.exercises[this.curr_exercise.exercise].name);
+						this.readText (exercises[this.curr_exercise.exercise].name);
 					}
 					else if (this.curr_exercise.period == 'work' && curr_workout.exercises.length - 1 > this.curr_exercise.exercise) {
 						this.curr_exercise.period = 'rest';
 						//this.beep2.play();
 						
 						this.readText ('Rest').then ( () => {
-							let next_speak = () => this.readText ('Next exercise: ' + curr_workout.exercises[this.curr_exercise.exercise + 1].name);
+							let next_speak = () => this.readText ('Next exercise: ' + exercises[this.curr_exercise.exercise + 1].name);
 							
 							if ( curr_workout.exercises.length > 1 && curr_workout.exercises.length - 1 > this.curr_exercise.exercise && Math.round (curr_workout.exercises.length / 2) - 1 == this.curr_exercise.exercise )
 							{
@@ -205,7 +213,7 @@ function App() {
 							this.curr_exercise.exercise++;
 							//this.beep2.play();
 							this.readText ('go!');
-							this.readText (curr_workout.exercises[this.curr_exercise.exercise].name);
+							this.readText (exercises[this.curr_exercise.exercise].name);
 							this.curr_exercise.remaining_time = this.get_work_period();
 							this.update_progressbar ('exercise', this.curr_exercise.remaining_time);
 						}
@@ -257,10 +265,16 @@ function App() {
 		},
 		start_workout: function() {
 			let curr_workout = this.get_curr_workout();
+			if (this.shuffle) {
+				curr_workout.shuffle_exercises = this.shuffle_workout (curr_workout);
+			}
+			
 			this.curr_exercise.exercise = 0;
 			this.curr_exercise.period = 'work';
 			this.curr_exercise.remaining_time = curr_workout.settings.pre_delay * 1000;
 			this.state = 'pre_delay';
+			
+			this.nosleep.enable();
 			
 			let start = () => {
 				this.last_time = Date.now();		
@@ -268,7 +282,7 @@ function App() {
 				this.run();
 			};
 			
-			this.readText ('First exercise: ' + curr_workout.exercises[this.curr_exercise.exercise].name).then ( () => {
+			this.readText ('First exercise: ' + this.get_exercises()[this.curr_exercise.exercise].name).then ( () => {
 				if (curr_workout.settings.pre_delay > 0) {
 					this.readText (`Starting in ${curr_workout.settings.pre_delay} seconds${curr_workout.settings.pre_delay != 1 ? 's' : ''}`).then (start);
 				}
@@ -377,6 +391,17 @@ function App() {
 		share_workout: function (workout) {
 			let url = window.location.href.split('?')[0];
 			console.log ( url + '?share_workout=' + encodeURIComponent ( JSON.stringify (workout) ) );
+		},
+		shuffle: false,
+		shuffle_workout: function (workout) {
+			let exercises = [...workout.exercises];
+			for (let i = exercises.length - 1; i > 0; i--) {
+				const j = Math.floor ( Math.random() * (i + 1) );
+				[exercises[i], exercises[j]] = [exercises[j], exercises[i]];
+			}
+			
+			console.log (exercises);
+			return exercises;
 		}
 	};
 }

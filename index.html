@@ -3,9 +3,11 @@
 	<head>
 		<meta charset="utf-8" />
 		<title>Talking Workout Trainer</title>
-		<script defer src="alpine.min.js"></script>
-		<script src="Speakit1.0.1.min.js"></script>
-		<script src="howler.min.js"></script>
+		<script defer src="lib/alpine.min.js"></script>
+		<script src="lib/Speakit1.0.1.min.js"></script>
+		<script src="lib/NoSleep.min.js"></script>
+		<script src="lib/howler.min.js"></script>
+		
 		<script src="demo_workouts.js"></script>
 		<script src="app.js"></script>
 		<style>
@@ -165,17 +167,22 @@
 				<template x-if="panel == 'load'">
 					<box>
 						<h3>Load workout</h3>
-						<table>
+						<table x-data="{mousedown: null}">
 							<thead>
 								<th>Name</th>
 								<th>Exercises</th>
 								<th>Duration</th>
 								<th></th>
 								<th></th>
+								<th></th>
 							</thead>
 							<template x-for="(workout, w) in workouts" :key="w">
-								<tr>
-									<td style="padding: 0.5rem; cursor: pointer;" x-html="workout.name" @click="load_workout (w)"></td>
+								<tr :style="{'background-color': mousedown == w ? '#A0A0A0' : 'none'}">
+									<td style="padding: 0.5rem; cursor: pointer;"
+										x-html="workout.name"
+										@mousedown="mousedown = w;"
+										@mouseup="mousedown = null;"
+										@click="load_workout (w)"></td>
 									<td>
 										<span style="display: flex; align-items: center; justify-content: center;"
 										 x-html="workout.exercises.length">
@@ -187,7 +194,10 @@
 										</span>
 									</td>
 									<td>
-										<button @click="workouts.splice (w, 1); if (curr_workout == w) { curr_workout--; }; store();" :disabled="workouts.length < 2">&#128465;</button>
+										<button title="delete workout" @click="workouts.splice (w, 1); if (curr_workout == w) { curr_workout--; }; store();" :disabled="workouts.length < 2">&#128465;</button>
+									</td>
+									<td>
+										<button title="duplicate workout" @click="workouts.splice (w, 0, workout); store();">&#x2398;</button>
 									</td>
 									<td x-data="{shared: false}" style="display: flex; flex-direction: column;">
 										<button x-show="!shared" @click="shared = true;">Share</button>
@@ -332,7 +342,7 @@
 						<h2 x-html="get_curr_workout().name"></h2>
 						<div style="flex-direction: column; align-items: center;" :style="{display: is_running() ? 'flex' : 'none'}">
 							<template x-if="state =='running' && curr_exercise.period == 'work'">
-								<h3 x-html="get_curr_workout().exercises[curr_exercise.exercise].name"></h3>
+								<h3 x-html="get_exercises()[curr_exercise.exercise].name"></h3>
 							</template>
 							<template x-if="state =='pre_delay' && curr_exercise.period == 'work'">
 								<h3>Get ready</h3>
@@ -345,10 +355,10 @@
 							</workout_timer>
 							<template x-if="get_curr_workout().exercises.length - 1 > curr_exercise.exercise">
 								<div style="text-align: center; font-size: 3rem;">
-									Next exercise: <span x-html="get_curr_workout().exercises[curr_exercise.exercise + (state == 'pre_delay' ? 0 : 1)].name"></span>
+									Next exercise: <span x-html="get_exercises()[curr_exercise.exercise + (state == 'pre_delay' ? 0 : 1)].name"></span>
 								</div>
 							</template>
-							<template x-if="get_curr_workout().exercises.length - 1 <= curr_exercise.exercise">
+							<template x-if="get_exercises().length - 1 <= curr_exercise.exercise">
 								<div style="text-align: center; font-size: 3rem;">
 									Last exercise
 								</div>
@@ -359,7 +369,14 @@
 						</template>
 						
 						<div style="display: flex;">
-							<button @click="start_workout()" x-show="!is_running()">Start</button>
+							<div style="display: flex; flex-direction: column; align-items: center;">
+								<button @click="start_workout()" x-show="!is_running()">Start</button>
+								<template x-if="!is_running()">
+									<label style="border: none; font-size: 2rem;">
+										<input type="checkbox" x-model="shuffle" /> Shuffle exercises
+									</label>
+								</template>
+							</div>
 							<button @click="pause_workout()" x-show="is_running()" x-html="pause ? 'Continue' : 'Pause'"></button>
 							<button @click="quit_workout()" x-show="is_running()">Quit</button>
 						</div>
