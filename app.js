@@ -101,7 +101,7 @@ function App() {
 		add_exercise: function() {
 			this.temp_workout.exercises.push ({name: '', work_period: 'default', rest_period: 'default'});
 			setTimeout ( () => {
-				window.scrollTo(0, document.body.scrollHeight);
+				document.getElementById (`exercise_${this.temp_workout.exercises.length - 1}`).scrollIntoView ({behavior: 'smooth'});
 				document.getElementById (`exercise_name_${this.temp_workout.exercises.length - 1}`).focus();
 			}, 200 );
 		},

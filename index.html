@@ -262,7 +262,7 @@
 							<i>No exercises so far. Press "+ exercise" to add one</i>
 						</template>
 						<template x-for="(exercise, e) in temp_workout.exercises" :key="e">
-							<box style="margin: 0.5rem 0 2rem 0;">
+							<box style="margin: 0.5rem 0 2rem 0;" :id="`exercise_${e}`">
 								<div style="display: flex; justify-content: end;">
 									<button @click="if (e > 0) {[temp_workout.exercises[e - 1], temp_workout.exercises[e]] = [temp_workout.exercises[e], temp_workout.exercises[e - 1]]; }"
 											:disabled="e <= 0"
@@ -270,7 +270,7 @@
 									<button @click="if (e < temp_workout.exercises.length - 1) { [temp_workout.exercises[e + 1], temp_workout.exercises[e]] = [temp_workout.exercises[e], temp_workout.exercises[e + 1]]; }"
 											:disabled="e >= temp_workout.exercises.length - 1"
 											title="move exercise down">&#8595;</button>
-									<button @click="temp_workout.exercises.splice (e, 0, exercise)"
+									<button @click="temp_workout.exercises.splice (e, 0, exercise); setTimeout ( () => document.getElementById (`exercise_${e + 1}`).scrollIntoView ({behavior: 'smooth'}), 200 );"
 									        title="duplicate exercise">&#x2398;</button>
 									<button @click="temp_workout.exercises.splice (e, 1)"
 											title="delete exercise">&#128465;</button>
