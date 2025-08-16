@@ -74,7 +74,6 @@ function App() {
 			for (let v in this.voices)
 			{
 				let voice = this.voices[v];
-				console.log (voice.name, name);
 				if (voice.name == name) {
 					return v;
 				}
@@ -85,18 +84,21 @@ function App() {
 		panel: 'run',
 		workouts: [],
 		curr_workout: null,
+		workout_template: {
+			name: '',
+			settings: {
+				pre_delay: 5,
+				count_down: 3,
+				work_period: 45,
+				rest_period: 15,
+				voice: '_default_'
+			},
+			exercises: [],
+			completed: 0
+		},
 		reset_temp_workout: function() {
-			this.temp_workout = {
-				name: '',
-				settings: {
-					pre_delay: 5,
-					count_down: 3,
-					work_period: 50,
-					rest_period: 10,
-					voice: '_default_'
-				},
-				exercises: [],
-			};
+			this.temp_workout = _.cloneDeep (this.workout_template);
+			this.edit_workout = null;
 		},
 		add_exercise: function() {
 			this.temp_workout.exercises.push ({name: '', work_period: 'default', rest_period: 'default'});
@@ -121,13 +123,16 @@ function App() {
 			this.panel = 'run';
 		},
 		cancel_edit_workout: function() {
-			if ( confirm ('Are you sure you want to exit the workout editor? Your workout will not be saved') ) {
+			let has_changed = ( this.edit_workout == null && !_.isEqual (this.temp_workout, this.workout_template) ) || // new workout
+							  ( this.edit_workout != null && !_.isEqual ( _.cloneDeep (this.workouts[this.edit_workout]), this.temp_workout ) ); // edit workout
+			if ( !has_changed || confirm ('Are you sure you want to exit the workout editor? Your workout will not be saved') ) {
 				this.reset_temp_workout();
 				this.curr_workout = 0;
 				this.panel = 'run';
 			}
 		},
 		temp_workout: null,
+		edit_workout: null, // changed workout will be compared to this to check if anything has changed
 			
 		
 		curr_exercise: {},
@@ -223,6 +228,8 @@ function App() {
 							this.state = 'finished';
 							this.stop_animation ('exercise');
 							this.stop_animation ('workout');
+							curr_workout.completed = (curr_workout.completed ?? 0) + 1;
+							this.store();
 							
 							finished = true;
 						}
@@ -400,8 +407,20 @@ function App() {
 				[exercises[i], exercises[j]] = [exercises[j], exercises[i]];
 			}
 			
-			console.log (exercises);
 			return exercises;
-		}
+		},
+		
+		show_import: false,
+		exercises_import_str: '',
+		import_exercises: function() {
+			for ( let exercise_name of this.exercises_import_str.split ('\n') ) {
+				if ( this.temp_workout.exercises.filter ( exercise => exercise.name == exercise_name ).length == 0 ) {
+					this.temp_workout.exercises.push ({name: exercise_name, work_period: 'default', rest_period: 'default'});
+				}
+			}
+			
+			this.show_import = false;
+			this.exercises_import_str = '';
+		},
 	};
 }

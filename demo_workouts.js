@@ -6,7 +6,8 @@ function get_demo_workouts (voices) {
 			count_down: 3,
 			work_period: 45,
 			rest_period: 15,
-			voice: '_default_'
+			voice: '_default_',
+			completed: 0
 		},
 		exercises: [{
 			name: 'Boat hold',
@@ -87,6 +88,7 @@ function get_demo_workouts (voices) {
 			work_period: 45,
 			rest_period: 15,
 			voice: '_default_',
+			completed: 0
 		},
 		exercises: [{
 			name: 'Push-ups',

@@ -3,6 +3,7 @@
 	<head>
 		<meta charset="utf-8" />
 		<title>Talking Workout Trainer</title>
+		<script src="lib/lodash.min.js"></script>
 		<script defer src="lib/alpine.min.js"></script>
 		<script src="lib/Speakit1.0.1.min.js"></script>
 		<script src="lib/NoSleep.min.js"></script>
@@ -114,6 +115,14 @@
 				position: relative;
 			}
 			
+			value {
+				background-color: #AFAFAF;
+				border-radius: 20px;
+				font-size: 3rem;
+				padding: 0.5rem;
+				font-family: Monospace;
+			}
+			
 			h1, h2, h3 {
 				text-align: center;
 				margin: 0;
@@ -157,25 +166,17 @@
 	<body x-data="App()">
 		<template x-if="state != 'not_init'">
 			<div>
-				<template x-if="!['edit', 'create'].includes (panel)">
+				<template x-if="panel == 'run'">
 					<navigation>
 						<button @click="stop_workout(); panel = 'create'; curr_workout = null;" x-show="panel != 'create'">+ workout</button>
-						<button @click="stop_workout(); temp_workout = get_curr_workout(); panel = 'edit';" x-show="panel != 'edit'">Edit workout</button>
+						<button @click="stop_workout(); temp_workout = _.cloneDeep ( get_curr_workout() ); edit_workout = curr_workout; panel = 'edit';" x-show="panel != 'edit'">Edit workout</button>
 						<button @click="stop_workout(); panel = 'load';" x-show="panel != 'load'">Load workout</button>
 					</navigation>
 				</template>
 				<template x-if="panel == 'load'">
 					<box>
 						<h3>Load workout</h3>
-						<table x-data="{mousedown: null}">
-							<thead>
-								<th>Name</th>
-								<th>Exercises</th>
-								<th>Duration</th>
-								<th></th>
-								<th></th>
-								<th></th>
-							</thead>
+						<table x-data="{mousedown: null}" style="width: 100%;">
 							<template x-for="(workout, w) in workouts" :key="w">
 								<tr :style="{'background-color': mousedown == w ? '#A0A0A0' : 'none'}">
 									<td style="padding: 0.5rem; cursor: pointer;"
@@ -183,27 +184,34 @@
 										@mousedown="mousedown = w;"
 										@mouseup="mousedown = null;"
 										@click="load_workout (w)"></td>
-									<td>
-										<span style="display: flex; align-items: center; justify-content: center;"
-										 x-html="workout.exercises.length">
-										</span>
 									</td>
-									<td style="display: flex; align-items: center; justify-content: center;">
-										<span style="background-color: #AFAFAF; border-radius: 20px; font-size: 3rem; padding: 0.5rem; font-family: Monospace;"
-											  x-html="secondsToTime ( Math.floor ( getWorkoutDuration (workout) / 1000 ) )">
-										</span>
-									</td>
-									<td>
-										<button title="delete workout" @click="workouts.splice (w, 1); if (curr_workout == w) { curr_workout--; }; store();" :disabled="workouts.length < 2">&#128465;</button>
-									</td>
-									<td>
-										<button title="duplicate workout" @click="workouts.splice (w, 0, workout); store();">&#x2398;</button>
-									</td>
-									<td x-data="{shared: false}" style="display: flex; flex-direction: column;">
-										<button x-show="!shared" @click="shared = true;">Share</button>
-										<button x-show="shared" @click="$refs.share_link.select(); document.execCommand ('copy')">Copy link</button>
-										<input x-ref="share_link" style="width: 20vw;" type="text" x-show="shared" :value="window.location.href.split('?')[0] + '?share_workout=' + encodeURIComponent ( JSON.stringify (workout) )">
+									<td style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+										<div style="white-space: nowrap; margin: 1rem;">
+											<value x-html="workout.exercises.length"></value> exercises
+										</div>
 										
+										<div style="white-space: nowrap; margin: 1rem;">
+											<value x-html="secondsToTime ( Math.floor ( getWorkoutDuration (workout) / 1000 ) )"></value>
+											minutes
+										</div>
+										
+										<div style="white-space: nowrap; margin: 1rem;">
+											<value><span x-html="workout.completed ?? 0"></span>x</value>
+											completed
+										</div>
+									</td>
+									<td x-data="{shared: false}">
+										<div style="display: flex; flex-wrap: wrap;">
+											<button title="delete workout" @click="workouts.splice (w, 1); if (curr_workout == w) { curr_workout--; }; store();" :disabled="workouts.length < 2">&#128465;</button>
+
+											<button title="duplicate workout" @click="workouts.splice (w, 0, _.cloneDeep (workout) ); store();">&#x2398;</button>
+											
+											<div>
+												<button x-show="!shared" @click="shared = true;"><img src="resources/share-fill.svg" width="50" /></button>
+												<button x-show="shared" @click="$refs.share_link.select(); document.execCommand ('copy')">Copy link</button>
+												<input x-ref="share_link" style="width: 20vw;" type="text" x-show="shared" :value="window.location.href.split('?')[0] + '?share_workout=' + encodeURIComponent ( JSON.stringify (workout) )">
+											</div>
+										</div>
 									</td>
 								</tr>
 							</template>
@@ -270,7 +278,7 @@
 									<button @click="if (e < temp_workout.exercises.length - 1) { [temp_workout.exercises[e + 1], temp_workout.exercises[e]] = [temp_workout.exercises[e], temp_workout.exercises[e + 1]]; }"
 											:disabled="e >= temp_workout.exercises.length - 1"
 											title="move exercise down">&#8595;</button>
-									<button @click="temp_workout.exercises.splice (e, 0, exercise); setTimeout ( () => document.getElementById (`exercise_${e + 1}`).scrollIntoView ({behavior: 'smooth'}), 200 );"
+									<button @click="temp_workout.exercises.splice (e, 0, _.cloneDeep (exercise) ); setTimeout ( () => document.getElementById (`exercise_${e + 1}`).scrollIntoView ({behavior: 'smooth'}), 200 );"
 									        title="duplicate exercise">&#x2398;</button>
 									<button @click="temp_workout.exercises.splice (e, 1)"
 											title="delete exercise">&#128465;</button>
@@ -324,16 +332,27 @@
 							</box>
 						</template>
 						<div style="display: flex; justify-content: space-between;">
-							<button @click="add_exercise()">+ exercise</button>
+							<div style="display: flex; flex-direction: column;">
+								<button @click="add_exercise()">+ exercise</button>
+								<button x-show="!show_import" @click="show_import = true;">import exercises</button>
+							</div>
 							
 							<div style="display: flex;">
-								<button @click="cancel_edit_workout()">Cancel</button>
-								<button @click="save_workout()" :disabled="temp_workout.name == '' || temp_workout.exercises.length == 0">Save</button>
+								<div><button @click="cancel_edit_workout()">Cancel</button></div>
+								
+								<div style="display: flex; flex-direction: column;">
+									<button @click="save_workout()" :disabled="temp_workout.name == '' || temp_workout.exercises.length == 0">Save</button>
+									<template x-if="temp_workout.name == ''"><div>Enter workout name</div></template>
+									<template x-if="temp_workout.exercises.length == 0"><div>Add at least one exercise</div></template>
+								</div>
 							</div>
 						</div>
-						
-						<template x-if="temp_workout.name == ''"><div>Enter workout name</div></template>
-						<template x-if="temp_workout.exercises.length == 0"><div>Add at least one exercise</div></template>
+						<template x-if="show_import">
+							<div>
+								<textarea x-model="exercises_import_str" rows="10" style="width: 100%;" placeholder="paste your exercises here, separated by newline"></textarea><br />
+								<button @click="import_exercises()">import exercises</button>
+							</div>
+						</template>
 					</div>
 				</template>
 				
