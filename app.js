@@ -141,15 +141,19 @@ function App() {
 		get_curr_workout: function() {
 			return this.workouts[this.curr_workout];
 		},
-		get_exercises: function() {
+		get_exercises: function  (workout=null) {
+			if (workout == null) {
+				workout = this.get_curr_workout();
+			}
 			if (this.shuffle) {
-				return this.get_curr_workout().shuffle_exercises;
+				return workout.shuffle_exercises;
 			}
 			// else
-			return this.get_curr_workout().exercises;
+			return workout.exercises;
 		},
 		state: 'not_init',
 		last_time: null,
+		last_countdown: Infinity,
 		run: function() {
 			let time = Date.now();
 			let time_diff = time - this.last_time;
@@ -165,6 +169,7 @@ function App() {
 				this.curr_exercise.remaining_time = this.get_curr_workout().settings.pre_delay * 1000;
 				this.state = 'not_started';
 				this.quit = false;
+				this.last_countdown = Infinity;
 				return;
 			}
 			
@@ -175,13 +180,17 @@ function App() {
 				this.curr_exercise.remaining_time -= time_diff;
 				
 				// countdown
-				if (this.curr_exercise.remaining_time <= (curr_workout.settings.count_down * 1000) && this.curr_exercise.remaining_time > 0) {
+				let remain = Math.round (this.curr_exercise.remaining_time / 1000);
+				if (remain <= curr_workout.settings.count_down && remain > 0) {
 					//this.beep1.play()
-					let count_down = (curr_workout.settings.count_down * 1000);
-					this.readText ( Math.round (this.curr_exercise.remaining_time / 1000) );
+					
+					if (this.last_countdown > remain && remain > 0) {
+						this.readText (remain);
+						this.last_countdown = remain;
+					}
 				}
 				
-				if (this.curr_exercise.remaining_time <= 0) {
+				if (remain <= 0) {
 					
 					if (this.state == 'pre_delay') {
 						this.curr_exercise.period = 'work';
@@ -193,15 +202,17 @@ function App() {
 						this.update_progressbar ( 'workout', this.getWorkoutDuration (curr_workout) );
 						
 						this.readText (exercises[this.curr_exercise.exercise].name);
+						this.last_countdown = Infinity;
 					}
 					else if (this.curr_exercise.period == 'work' && curr_workout.exercises.length - 1 > this.curr_exercise.exercise) {
 						this.curr_exercise.period = 'rest';
+						this.last_countdown = Infinity;
 						//this.beep2.play();
 						
 						this.readText ('Rest').then ( () => {
 							let next_speak = () => this.readText ('Next exercise: ' + exercises[this.curr_exercise.exercise + 1].name);
 							
-							if ( curr_workout.exercises.length > 1 && curr_workout.exercises.length - 1 > this.curr_exercise.exercise && Math.round (curr_workout.exercises.length / 2) - 1 == this.curr_exercise.exercise )
+							if ( this.get_rest_period (curr_workout,  curr_workout.exercises.length > 1 && curr_workout.exercises.length - 1 > this.curr_exercise.exercise && Math.round (curr_workout.exercises.length / 2) - 1 == this.curr_exercise.exercise )
 							{
 								this.readText ('Half way there').then ( () => next_speak() );
 							}
@@ -211,10 +222,11 @@ function App() {
 						});
 						
 						this.curr_exercise.remaining_time = this.get_rest_period();
-						this.update_progressbar ('exercise', this.curr_exercise.remaining_time);
+						this.update_progressbar ('exercise',remain);
 					}
 					else { // rest
 						this.curr_exercise.period = 'work';
+						this.last_countdown = Infinity;
 						
 						if (curr_workout.exercises.length - 1 > this.curr_exercise.exercise) {
 							this.curr_exercise.exercise++;
@@ -222,7 +234,7 @@ function App() {
 							this.readText ('go!');
 							this.readText (exercises[this.curr_exercise.exercise].name);
 							this.curr_exercise.remaining_time = this.get_work_period();
-							this.update_progressbar ('exercise', this.curr_exercise.remaining_time);
+							this.update_progressbar ('exercise', remain);
 						}
 						else {
 							//this.beep2.play();
@@ -234,13 +246,14 @@ function App() {
 							this.store();
 							
 							finished = true;
+							this.last_countdown = Infinity;
 						}
 					}
 				}
 			}
 			
 			if (!finished) {
-				setTimeout ( () => { this.run(); }, 1000);
+				setTimeout ( () => { this.run(); }, 10 );
 			}
 		},
 		get_work_period: function (workout = null, exercise = null) {
@@ -250,7 +263,7 @@ function App() {
 			
 			if (exercise == null)
 			{
-				exercise = this.curr_exercise.exercise;
+				exercise = this.get_exercises (workout)[this.curr_exercise.exercise];
 			}
 			
 			return ( workout.exercises[exercise].settings?.work_period ?? workout.settings.work_period ) * 1000;

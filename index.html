@@ -166,7 +166,7 @@
 	<body x-data="App()">
 		<template x-if="state != 'not_init'">
 			<div>
-				<template x-if="panel == 'run'">
+				<template x-if="panel == 'run' && ['not_started', 'finished'].includes (state)">
 					<navigation>
 						<button @click="stop_workout(); panel = 'create'; curr_workout = null;" x-show="panel != 'create'">+ workout</button>
 						<button @click="stop_workout(); temp_workout = _.cloneDeep ( get_curr_workout() ); edit_workout = curr_workout; panel = 'edit';" x-show="panel != 'edit'">Edit workout</button>
