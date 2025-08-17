@@ -121,6 +121,7 @@ function App() {
 			this.store();
 			this.reset_temp_workout();
 			this.panel = 'run';
+			this.state = 'not_started';
 		},
 		cancel_edit_workout: function() {
 			let has_changed = ( this.edit_workout == null && !_.isEqual (this.temp_workout, this.workout_template) ) || // new workout
@@ -129,6 +130,7 @@ function App() {
 				this.reset_temp_workout();
 				this.curr_workout = 0;
 				this.panel = 'run';
+				this.state = 'not_started';
 			}
 		},
 		temp_workout: null,
@@ -269,6 +271,7 @@ function App() {
 			this.curr_workout = index;
 			this.store();
 			this.panel = 'run';
+			this.state = 'not_started';
 		},
 		start_workout: function() {
 			let curr_workout = this.get_curr_workout();
@@ -397,7 +400,7 @@ function App() {
 		},
 		share_workout: function (workout) {
 			let url = window.location.href.split('?')[0];
-			console.log ( url + '?share_workout=' + encodeURIComponent ( JSON.stringify (workout) ) );
+			console.log ( url + '?share_workout=' + encodeURIComponent ( JSON.stringify ( _.omit (workout, ['completed']) ) ) );
 		},
 		shuffle: false,
 		shuffle_workout: function (workout) {

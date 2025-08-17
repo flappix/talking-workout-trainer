@@ -185,8 +185,8 @@
 										@mouseup="mousedown = null;"
 										@click="load_workout (w)"></td>
 									</td>
-									<td style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-										<div style="white-space: nowrap; margin: 1rem;">
+									<td style="display: flex; flex-direction: column; align-items: start; justify-content: center;">
+										<div style="margin: 0; padding: 0; white-space: nowrap; margin: 1rem;">
 											<value x-html="workout.exercises.length"></value> exercises
 										</div>
 										
@@ -200,6 +200,7 @@
 											completed
 										</div>
 									</td>
+									
 									<td x-data="{shared: false}">
 										<div style="display: flex; flex-wrap: wrap;">
 											<button title="delete workout" @click="workouts.splice (w, 1); if (curr_workout == w) { curr_workout--; }; store();" :disabled="workouts.length < 2">&#128465;</button>
@@ -375,6 +376,7 @@
 							<template x-if="get_curr_workout().exercises.length - 1 > curr_exercise.exercise">
 								<div style="text-align: center; font-size: 3rem;">
 									Next exercise: <span x-html="get_exercises()[curr_exercise.exercise + (state == 'pre_delay' ? 0 : 1)].name"></span>
+									
 								</div>
 							</template>
 							<template x-if="get_exercises().length - 1 <= curr_exercise.exercise">
@@ -382,6 +384,9 @@
 									Last exercise
 								</div>
 							</template>
+							<div>
+								(<span x-html="curr_exercise.exercise + 1"></span>/<span x-html="get_curr_workout().exercises.length"></span>)
+							</div>
 						</div>
 						<template x-if="state == 'finished'">
 							<h3>Finished</h3>
