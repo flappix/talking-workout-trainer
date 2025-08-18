@@ -195,13 +195,12 @@ function App() {
 					if (this.state == 'pre_delay') {
 						this.curr_exercise.period = 'work';
 						//this.beep2.play();
-						this.readText ('go!');
+						this.readText (`go! ${exercises[this.curr_exercise.exercise].name}`);
 						this.state = 'running';
 						this.curr_exercise.remaining_time = this.get_work_period();
 						this.update_progressbar ('exercise', this.curr_exercise.remaining_time);
 						this.update_progressbar ( 'workout', this.getWorkoutDuration (curr_workout) );
 						
-						this.readText (exercises[this.curr_exercise.exercise].name);
 						this.last_countdown = Infinity;
 					}
 					else if (this.curr_exercise.period == 'work' && curr_workout.exercises.length - 1 > this.curr_exercise.exercise) {
@@ -212,7 +211,8 @@ function App() {
 						this.readText ('Rest').then ( () => {
 							let next_speak = () => this.readText ('Next exercise: ' + exercises[this.curr_exercise.exercise + 1].name);
 							
-							if ( this.get_rest_period (curr_workout,  curr_workout.exercises.length > 1 && curr_workout.exercises.length - 1 > this.curr_exercise.exercise && Math.round (curr_workout.exercises.length / 2) - 1 == this.curr_exercise.exercise )
+							if ( this.get_rest_period (curr_workout,  curr_workout.exercises.length) > 1 && curr_workout.exercises.length - 1 > this.curr_exercise.exercise &&
+								 Math.round (curr_workout.exercises.length / 2) - 1 == this.curr_exercise.exercise )
 							{
 								this.readText ('Half way there').then ( () => next_speak() );
 							}
@@ -222,7 +222,7 @@ function App() {
 						});
 						
 						this.curr_exercise.remaining_time = this.get_rest_period();
-						this.update_progressbar ('exercise',remain);
+						this.update_progressbar ('exercise', this.curr_exercise.remaining_time);
 					}
 					else { // rest
 						this.curr_exercise.period = 'work';
@@ -231,10 +231,9 @@ function App() {
 						if (curr_workout.exercises.length - 1 > this.curr_exercise.exercise) {
 							this.curr_exercise.exercise++;
 							//this.beep2.play();
-							this.readText ('go!');
-							this.readText (exercises[this.curr_exercise.exercise].name);
+							this.readText (`go! ${exercises[this.curr_exercise.exercise].name}`);
 							this.curr_exercise.remaining_time = this.get_work_period();
-							this.update_progressbar ('exercise', remain);
+							this.update_progressbar ('exercise', this.curr_exercise.remaining_time);
 						}
 						else {
 							//this.beep2.play();
@@ -266,7 +265,7 @@ function App() {
 				exercise = this.get_exercises (workout)[this.curr_exercise.exercise];
 			}
 			
-			return ( workout.exercises[exercise].settings?.work_period ?? workout.settings.work_period ) * 1000;
+			return ( exercise.settings?.work_period ?? workout.settings.work_period ) * 1000;
 		},
 		get_rest_period: function (workout = null, exercise = null) {
 			if (workout == null) {
@@ -278,7 +277,7 @@ function App() {
 				exercise = this.curr_exercise.exercise;
 			}
 			
-			return ( workout.exercises[exercise].settings?.rest_period ?? workout.settings.rest_period ) * 1000;
+			return ( exercise.settings?.rest_period ?? workout.settings.rest_period ) * 1000;
 		},
 		load_workout: function (index) {
 			this.curr_workout = index;
@@ -344,10 +343,9 @@ function App() {
 			localStorage.setItem ('last_workout', this.curr_workout);
 		},
 		getWorkoutDuration: function (workout) {
-			return workout.exercises.reduce ( (sum, x, i) => sum + this.get_work_period (workout, x.exercise) + ( i < workout.exercises.length - 1 ? this.get_rest_period (workout, x.excercise) : 0 ) , 0 );
+			return workout.exercises.reduce ( (sum, x, i) => sum + this.get_work_period (workout, x) + ( i < workout.exercises.length - 1 ? this.get_rest_period (workout, x) : 0 ) , 0 );
 		},
 		update_progressbar: function (type, time) {
-			console.log (type, time);
 			if (type == 'exercise') {
 				if (document.styleSheets[1].cssRules.length > 0) {
 					this.stop_animation ('exercise');
@@ -380,7 +378,6 @@ function App() {
 		stop_animation: function (type) {
 			let style = document.styleSheets[type == 'exercise' ? 1 : 2];
 			if (style.cssRules.length > 0) {
-				console.log ('stop anim 0', type);
 				style.removeRule (0);
 			}
 			
@@ -392,7 +389,6 @@ function App() {
 			
 			let element = document.getElementById (type + '_timer');
 			if (element) {
-				console.log ('stop anim 1', type);
 				element.style.animation = 'none';
 				element.offsetHeight; /* trigger reflow */
 				element.style.animation = null; 
@@ -403,17 +399,22 @@ function App() {
 				  s = Math.floor(e % 60).toString().padStart(2,'0');	
 			return m + ':' + s;
 		},
+		
+		reading: false,
 		readText: function (text, workout=null) {
-			if (workout == null) {
-				workout = this.get_curr_workout();
+			if (!this.reading) {
+				this.reading = true;
+				if (workout == null) {
+					workout = this.get_curr_workout();
+				}
+				
+				let voice = this.voices[this.get_voice (workout.settings.voice)];
+				return Speakit.readText (text, voice.lang, voice.name).then ( () => { this.reading = false; } );
 			}
-			
-			let voice = this.voices[this.get_voice (workout.settings.voice)];
-			return Speakit.readText (text, voice.lang, voice.name);
 		},
 		share_workout: function (workout) {
 			let url = window.location.href.split('?')[0];
-			console.log ( url + '?share_workout=' + encodeURIComponent ( JSON.stringify ( _.omit (workout, ['completed']) ) ) );
+			//console.log ( url + '?share_workout=' + encodeURIComponent ( JSON.stringify ( _.omit (workout, ['completed']) ) ) );
 		},
 		shuffle: false,
 		shuffle_workout: function (workout) {
