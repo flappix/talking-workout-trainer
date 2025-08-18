@@ -203,14 +203,14 @@
 									
 									<td x-data="{shared: false}">
 										<div style="display: flex; flex-wrap: wrap;">
-											<button title="delete workout" @click="workouts.splice (w, 1); if (curr_workout == w) { curr_workout--; }; store();" :disabled="workouts.length < 2">&#128465;</button>
+											<button title="delete workout" @click="delete_workout (w)" :disabled="workouts.length < 2">&#128465;</button>
 
 											<button title="duplicate workout" @click="workouts.splice (w, 0, _.cloneDeep (workout) ); store();">&#x2398;</button>
 											
 											<div>
 												<button x-show="!shared" @click="shared = true;"><img src="resources/share-fill.svg" width="50" /></button>
 												<button x-show="shared" @click="$refs.share_link.select(); document.execCommand ('copy')">Copy link</button>
-												<input x-ref="share_link" style="width: 20vw;" type="text" x-show="shared" :value="window.location.href.split('?')[0] + '?share_workout=' + encodeURIComponent ( JSON.stringify (workout) )">
+												<input x-ref="share_link" style="width: 20vw;" type="text" x-show="shared" :value="window.location.href.split('?')[0] + '?share_workout=' + encodeURIComponent ( JSON.stringify ( _.omit (workout, ['completed']) ) )">
 											</div>
 										</div>
 									</td>

@@ -123,12 +123,21 @@ function App() {
 			this.panel = 'run';
 			this.state = 'not_started';
 		},
+		delete_workout: function (w) {
+			if ( confirm (`Are you sure you want to delete ${this.workouts[w].name} ?`) ) {
+				this.workouts.splice (w, 1);
+				if (this.curr_workout == w) {
+					this.curr_workout--;
+				};
+				this.store();
+			}
+		},
 		cancel_edit_workout: function() {
 			let has_changed = ( this.edit_workout == null && !_.isEqual (this.temp_workout, this.workout_template) ) || // new workout
 							  ( this.edit_workout != null && !_.isEqual ( _.cloneDeep (this.workouts[this.edit_workout]), this.temp_workout ) ); // edit workout
 			if ( !has_changed || confirm ('Are you sure you want to exit the workout editor? Your workout will not be saved') ) {
+				this.curr_workout = localStorage.getItem ('last_workout', 0)
 				this.reset_temp_workout();
-				this.curr_workout = 0;
 				this.panel = 'run';
 				this.state = 'not_started';
 			}
