@@ -385,7 +385,7 @@
 								</div>
 							</template>
 							<div>
-								(<span x-html="curr_exercise.exercise + 1"></span>/<span x-html="get_curr_workout().exercises.length"></span>)
+								(<span x-html="curr_exercise.exercise + (curr_exercise.period == 'work' ? 1 : 2)"></span>/<span x-html="get_curr_workout().exercises.length"></span>)
 							</div>
 						</div>
 						<template x-if="state == 'finished'">
