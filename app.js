@@ -193,7 +193,7 @@ function App() {
 				if (remain <= curr_workout.settings.count_down && remain > 0) {
 					//this.beep1.play()
 					
-					if (this.last_countdown > remain && remain > 0) {
+					if (this.last_countdown > remain && remain > 0 && !this.reading) {
 						this.readText (remain);
 						this.last_countdown = remain;
 					}
