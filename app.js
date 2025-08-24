@@ -255,6 +255,7 @@ function App() {
 							
 							finished = true;
 							this.last_countdown = Infinity;
+							this.nosleep.disable();
 						}
 					}
 				}
@@ -328,11 +329,21 @@ function App() {
 		pause_workout: function() {
 			this.pause = !this.pause;
 			
-			document.styleSheets[1].cssRules[0].style.animationPlayState = this.pause ? 'paused' : 'running';
+			if (document.styleSheets[1].cssRules[0]) {
+				document.styleSheets[1].cssRules[0].style.animationPlayState = this.pause ? 'paused' : 'running';
+			}
 			
 			// catch pre_delay phase
 			if (document.styleSheets[2].cssRules.length > 0) {
 				document.styleSheets[2].cssRules[0].style.animationPlayState = this.pause ? 'paused' : 'running';
+			}
+			
+			if (this.pause) {
+				this.nosleep.disable();
+			}
+			else
+			{
+				this.nosleep.enable();
 			}
 		},
 		is_running: function() {
@@ -342,10 +353,13 @@ function App() {
 			if ( this.is_running() ) {
 				this.quit = true;
 			}
+			
+			this.nosleep.disable();
 		},
 		quit: false,
 		quit_workout: function() {
 			this.quit = true;
+			this.nosleep.disable();
 		},
 		store: function() {
 			localStorage.setItem ('workouts', JSON.stringify (this.workouts) );
