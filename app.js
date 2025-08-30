@@ -462,5 +462,22 @@ function App() {
 			this.show_import = false;
 			this.exercises_import_str = '';
 		},
+		
+		jump_to_exercise: function (step) {
+			let new_exercise = this.curr_exercise.exercise + step;
+			if (0 <= new_exercise <= this.get_exercises().length - 1) {
+				this.curr_exercise.exercise = new_exercise;
+				this.curr_exercise.period = 'work';
+				this.curr_exercise.remaining_time = this.get_work_period();
+				
+				
+				this.update_progressbar ('exercise', this.curr_exercise.remaining_time);
+				this.update_progressbar ( 'workout', this.getWorkoutDuration ( this.get_curr_workout() ) );
+				
+				this.last_countdown = Infinity;
+				
+				this.readText ( this.get_exercises()[this.curr_exercise.exercise].name );
+			}
+		},
 	};
 }

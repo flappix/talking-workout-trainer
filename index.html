@@ -404,6 +404,12 @@
 							<button @click="pause_workout()" x-show="is_running()" x-html="pause ? 'Continue' : 'Pause'"></button>
 							<button @click="quit_workout()" x-show="is_running()">Quit</button>
 						</div>
+						
+						<div style="display: flex;"  x-show="state == 'running'">
+							<button @click="jump_to_exercise (-1)" :disabled="curr_exercise.exercise == 0">	&#9198;</button>
+							<button @click="jump_to_exercise (0)">&#10227;</button>
+							<button @click="jump_to_exercise (1)" :disabled="curr_exercise.exercise == get_exercises().length - 1">&#9193;</button>		
+						</div>
 					</run_panel>
 				</template>
 			</div>
