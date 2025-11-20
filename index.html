@@ -15,7 +15,6 @@
 			body {
 				font-family: Arial;
 				font-size: 2rem;
-				background-color: #E4E4E4;
 				height: 100vh;
 			}
 			
@@ -24,14 +23,8 @@
 				font-size: 4rem;
 			}
 			
-			table tr {
-				background-color: #D8D8D8;
-			}
-			
 			box {
 				display: block;
-				background-color: white;
-				border: 1px solid black;
 				border-radius: 5px;
 				padding: 0.5rem;
 			}
@@ -86,7 +79,6 @@
 				display: flex;
 				align-items: center;
 				justify-content: space-between;
-				border: 1px solid black;
 				border-radius: 5px;
 				padding: 0.5rem;
 			}
@@ -100,7 +92,6 @@
 				align-items: center;
 				justify-content: space-around;
 				position: relative;
-				background-color: white;
 				border-radius: 50%;
 			}
 			
@@ -164,6 +155,72 @@
 	</head>
 
 	<body x-data="App()">
+		<template x-if="!energy_saving_mode">
+			<style>
+				body {
+					background-color: #E4E4E4;
+					color: black;
+				}
+				
+				box {
+					background-color: white;
+					border: 1px solid black;
+				}
+				
+				exercise_timer {
+					background-color: white;
+				}
+				
+				table tr {
+					background-color: #D8D8D8;
+					color: white;
+				}
+				
+				value {
+					background-color: black;
+				}
+				
+				label {
+					border: 2px solid black;
+				}
+			</style>
+		</template>
+		
+		<template x-if="energy_saving_mode">
+			<style>
+				body {
+					background-color: black;
+					color: #ADADAD;
+				}
+				
+				box {
+					background-color: black;
+					border: 1px solid white;
+				}
+				
+				value {
+					background-color: black;
+				}
+				
+				exercise_timer {
+					background-color: black;
+				}
+				
+				table tr td {
+					background-color: black;
+					border: 1px solid #D2D2D2;
+				}
+				
+				button {
+					background-color: #313131;
+					color: #D2D2D2;
+				}
+				label {
+					border: 2px solid white;
+				}
+			</style>
+		</template>
+		
 		<template x-if="state != 'not_init'">
 			<div>
 				<template x-if="panel == 'run' && ['not_started', 'finished'].includes (state)">
@@ -171,6 +228,10 @@
 						<button @click="stop_workout(); panel = 'create'; curr_workout = null;" x-show="panel != 'create'">+ workout</button>
 						<button @click="stop_workout(); temp_workout = _.cloneDeep ( get_curr_workout() ); edit_workout = curr_workout; panel = 'edit';" x-show="panel != 'edit'">Edit workout</button>
 						<button @click="stop_workout(); panel = 'load';" x-show="panel != 'load'">Load workout</button>
+						<label>
+							&#128267;
+							<input type="checkbox" :checked="energy_saving_mode" @click="toggleEnergySavingMode()" />
+						</label>
 					</navigation>
 				</template>
 				<template x-if="panel == 'load'">
@@ -356,7 +417,6 @@
 						</template>
 					</div>
 				</template>
-				
 				<template x-if="panel == 'run'">
 					<run_panel>
 						<h2 x-html="get_curr_workout().name"></h2>
@@ -408,7 +468,7 @@
 						<div style="display: flex;"  x-show="state == 'running'">
 							<button @click="jump_to_exercise (-1)" :disabled="curr_exercise.exercise == 0">	&#9198;</button>
 							<button @click="jump_to_exercise (0)">&#10227;</button>
-							<button @click="jump_to_exercise (1)" :disabled="curr_exercise.exercise == get_exercises().length - 1">&#9193;</button>		
+							<button @click="jump_to_exercise (1)" :disabled="curr_exercise.exercise == get_exercises().length - 1">&#9197;</button>		
 						</div>
 					</run_panel>
 				</template>

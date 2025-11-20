@@ -51,6 +51,8 @@ function App() {
 				
 				this.state = 'not_started';
 				this.nosleep = new NoSleep();
+				
+				this.energy_saving_mode = localStorage.getItem ('energy_saving_mode') ||  false;
 			});
 		},
 		find_best_voice: function() {
@@ -136,7 +138,7 @@ function App() {
 			let has_changed = ( this.edit_workout == null && !_.isEqual (this.temp_workout, this.workout_template) ) || // new workout
 							  ( this.edit_workout != null && !_.isEqual ( _.cloneDeep (this.workouts[this.edit_workout]), this.temp_workout ) ); // edit workout
 			if ( !has_changed || confirm ('Are you sure you want to exit the workout editor? Your workout will not be saved') ) {
-				this.curr_workout = localStorage.getItem ('last_workout', 0)
+				this.curr_workout = localStorage.getItem ('last_workout') || 0;
 				this.reset_temp_workout();
 				this.panel = 'run';
 				this.state = 'not_started';
@@ -154,7 +156,7 @@ function App() {
 			if (workout == null) {
 				workout = this.get_curr_workout();
 			}
-			if (this.shuffle) {
+			if (this.shuffle && workout.shuffle_exercises) {
 				return workout.shuffle_exercises;
 			}
 			// else
@@ -329,13 +331,15 @@ function App() {
 		pause_workout: function() {
 			this.pause = !this.pause;
 			
-			if (document.styleSheets[1].cssRules[0]) {
-				document.styleSheets[1].cssRules[0].style.animationPlayState = this.pause ? 'paused' : 'running';
-			}
-			
-			// catch pre_delay phase
-			if (document.styleSheets[2].cssRules.length > 0) {
-				document.styleSheets[2].cssRules[0].style.animationPlayState = this.pause ? 'paused' : 'running';
+			if (!this.energy_saving_mode) {
+				if (document.styleSheets[1].cssRules[0]) {
+					document.styleSheets[1].cssRules[0].style.animationPlayState = this.pause ? 'paused' : 'running';
+				}
+				
+				// catch pre_delay phase
+				if (document.styleSheets[2].cssRules.length > 0) {
+					document.styleSheets[2].cssRules[0].style.animationPlayState = this.pause ? 'paused' : 'running';
+				}
 			}
 			
 			if (this.pause) {
@@ -362,59 +366,70 @@ function App() {
 			this.nosleep.disable();
 		},
 		store: function() {
-			localStorage.setItem ('workouts', JSON.stringify (this.workouts) );
+			let _workouts = _.cloneDeep (this.workouts);
+			for (let w of _workouts) {
+				if ('shuffle_exercises' in w) {
+					delete w.shuffle_exercises;
+				}
+			}
+			
+			localStorage.setItem ('workouts', JSON.stringify (_workouts) );
 			localStorage.setItem ('last_workout', this.curr_workout);
 		},
 		getWorkoutDuration: function (workout) {
 			return workout.exercises.reduce ( (sum, x, i) => sum + this.get_work_period (workout, x) + ( i < workout.exercises.length - 1 ? this.get_rest_period (workout, x) : 0 ) , 0 );
 		},
 		update_progressbar: function (type, time) {
-			if (type == 'exercise') {
-				if (document.styleSheets[1].cssRules.length > 0) {
-					this.stop_animation ('exercise');
+			if (!this.energy_saving_mode) {
+				if (type == 'exercise') {
+					if (document.styleSheets[1].cssRules.length > 0) {
+						this.stop_animation ('exercise');
+					}
+					
+					document.styleSheets[1].addRule ('exercise_timer::before',`content: "";
+						box-sizing: border-box;
+						position: absolute;
+						inset: 0px;
+						border-radius: 50%;
+						border: 1rem solid black;
+						transform: rotate(45deg);
+						animation: prixClipFix_exercise ${time / 1000}s linear 1;`
+					);
 				}
-				
-				document.styleSheets[1].addRule ('exercise_timer::before',`content: "";
-					box-sizing: border-box;
-					position: absolute;
-					inset: 0px;
-					border-radius: 50%;
-					border: 1rem solid black;
-					transform: rotate(45deg);
-					animation: prixClipFix_exercise ${time / 1000}s linear 1;`
-				);
-			}
-			else // workout
-			{
-				document.styleSheets[2].addRule ('workout_timer::before', `
-					content: "";
-					box-sizing: border-box;
-					position: absolute;
-					inset: 0px;
-					border-radius: 50%;
-					border: 1rem solid #616161;
-					transform: rotate(45deg);
-					animation: prixClipFix_workout ${time / 1000}s linear 1;
-				`);
+				else // workout
+				{
+					document.styleSheets[2].addRule ('workout_timer::before', `
+						content: "";
+						box-sizing: border-box;
+						position: absolute;
+						inset: 0px;
+						border-radius: 50%;
+						border: 1rem solid #616161;
+						transform: rotate(45deg);
+						animation: prixClipFix_workout ${time / 1000}s linear 1;
+					`);
+				}
 			}
 		},
 		stop_animation: function (type) {
-			let style = document.styleSheets[type == 'exercise' ? 1 : 2];
-			if (style.cssRules.length > 0) {
-				style.removeRule (0);
-			}
-			
-			for ( let anim of document.getAnimations() ) {
-				if ( anim.animationName.includes (type) ) {
-					anim.cancel();
+			if (!this.energy_saving_mode) {
+				let style = document.styleSheets[type == 'exercise' ? 1 : 2];
+				if (style.cssRules.length > 0) {
+					style.removeRule (0);
 				}
-			}
-			
-			let element = document.getElementById (type + '_timer');
-			if (element) {
-				element.style.animation = 'none';
-				element.offsetHeight; /* trigger reflow */
-				element.style.animation = null; 
+				
+				for ( let anim of document.getAnimations() ) {
+					if ( anim.animationName.includes (type) ) {
+						anim.cancel();
+					}
+				}
+				
+				let element = document.getElementById (type + '_timer');
+				if (element) {
+					element.style.animation = 'none';
+					element.offsetHeight; /* trigger reflow */
+					element.style.animation = null; 
+				}
 			}
 		},
 		secondsToTime: function(e) {
@@ -479,5 +494,11 @@ function App() {
 				this.readText ( this.get_exercises()[this.curr_exercise.exercise].name );
 			}
 		},
+		
+		energy_saving_mode: false,
+		toggleEnergySavingMode: function() {
+			this.energy_saving_mode = !this.energy_saving_mode;
+			localStorage.setItem ('energy_saving_mode', this.energy_saving_mode);
+		}
 	};
 }
