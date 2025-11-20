@@ -15,5 +15,6 @@ Interval timer which announces every exercises with an audio signal
   - per exercise
 - animated timer
 - share workouts via link
+- energy saving mode
 
 Feel free to report bugs and feature requests in the issue tracker.
