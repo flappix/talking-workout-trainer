@@ -150,11 +150,9 @@ function App() {
 		
 		curr_exercise: {},
 		get_curr_workout: function() {
-			console.log ('get_curr_workout');
 			return this.workouts[this.curr_workout];
 		},
 		get_exercises: function  (workout=null) {
-			console.log ('get_exercises');
 			if (workout == null) {
 				workout = this.get_curr_workout();
 			}
