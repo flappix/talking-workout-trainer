@@ -150,9 +150,11 @@ function App() {
 		
 		curr_exercise: {},
 		get_curr_workout: function() {
+			console.log ('get_curr_workout');
 			return this.workouts[this.curr_workout];
 		},
 		get_exercises: function  (workout=null) {
+			console.log ('get_exercises');
 			if (workout == null) {
 				workout = this.get_curr_workout();
 			}
@@ -264,7 +266,7 @@ function App() {
 			}
 			
 			if (!finished) {
-				setTimeout ( () => { this.run(); }, 10 );
+				setTimeout ( () => { this.run(); }, this.energy_saving_mode ? 200 : 20 );
 			}
 		},
 		get_work_period: function (workout = null, exercise = null) {
