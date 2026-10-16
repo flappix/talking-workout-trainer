@@ -329,19 +329,22 @@
 										@mouseup="mousedown = null;"
 										@click="load_workout (w)">
 									</td>
-									<td style="display: flex; flex-direction: column; align-items: start; justify-content: center;">
-										<div style="margin: 0; padding: 0; white-space: nowrap; margin: 1rem;">
-											<value x-html="workout.exercises.length"></value> exercises
-										</div>
-										
-										<div style="white-space: nowrap; margin: 1rem;">
-											<value x-html="secondsToTime ( Math.floor ( getWorkoutDuration (workout) / 1000 ) )"></value>
-											minutes
-										</div>
-										
-										<div style="white-space: nowrap; margin: 1rem;">
-											<value><span x-text="workout.completed ?? 0"></span>x</value>
-											completed
+									<!-- flex on an inner div: display: flex on the td itself stops it from stretching to the row height -->
+									<td>
+										<div style="display: flex; flex-direction: column; align-items: start; justify-content: center;">
+											<div style="margin: 0; padding: 0; white-space: nowrap; margin: 1rem;">
+												<value x-html="workout.exercises.length"></value> exercises
+											</div>
+
+											<div style="white-space: nowrap; margin: 1rem;">
+												<value x-html="secondsToTime ( Math.floor ( getWorkoutDuration (workout) / 1000 ) )"></value>
+												minutes
+											</div>
+
+											<div style="white-space: nowrap; margin: 1rem;">
+												<value><span x-text="workout.completed ?? 0"></span>x</value>
+												completed
+											</div>
 										</div>
 									</td>
 									
