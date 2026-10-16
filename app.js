@@ -11,7 +11,7 @@ function App() {
 				this.curr_workout = parseInt ( localStorage.getItem ('last_workout') );
 
 				if ( isNaN (this.curr_workout) || this.curr_workout < 0 || this.curr_workout >= this.workouts.length ) {
-					this.curr_workout = this.workouts.length - 1;
+					this.curr_workout = 0;
 				}
 				
 				// get shared workout

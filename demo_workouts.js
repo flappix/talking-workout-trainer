@@ -244,5 +244,77 @@ function get_demo_workouts (voices) {
 				"rest_period":"default"
 			}
 		]
+	},
+	{
+		"name":"Surf Workout",
+		"settings":{
+			"pre_delay":5,
+			"count_down":3,
+			"work_period":45,
+			"rest_period":15,
+			"voice":"_default_"
+		},
+		"exercises":[
+			{
+				"name":"Superman hold",
+				"work_period":"default",
+				"rest_period":"default"
+			},
+			{
+				"name":"Prone paddling",
+				"work_period":"default",
+				"rest_period":"default"
+			},
+			{
+				"name":"Push-ups",
+				"work_period":"default",
+				"rest_period":"default"
+			},
+			{
+				"name":"Prone Y raises",
+				"work_period":"default",
+				"rest_period":"default"
+			},
+			{
+				"name":"Pop-ups",
+				"work_period":"default",
+				"rest_period":"default"
+			},
+			{
+				"name":"Swimmers",
+				"work_period":"default",
+				"rest_period":"default"
+			},
+			{
+				"name":"Wide push-ups",
+				"work_period":"default",
+				"rest_period":"default"
+			},
+			{
+				"name":"Prone T raises",
+				"work_period":"default",
+				"rest_period":"default"
+			},
+			{
+				"name":"Hindu push-ups",
+				"work_period":"default",
+				"rest_period":"default"
+			},
+			{
+				"name":"Reverse snow angels",
+				"work_period":"default",
+				"rest_period":"default"
+			},
+			{
+				"name":"Diamond push-ups",
+				"work_period":"default",
+				"rest_period":"default"
+			},
+			{
+				"name":"Bird dog",
+				"work_period":"default",
+				"rest_period":"default"
+			}
+		]
 	}]
 }
