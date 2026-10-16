@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+	<!-- app icon: the two progress rings; everything stays inside the maskable safe zone (radius 205) -->
+	<rect width="512" height="512" fill="#1C1C1E" />
+	<!-- outer ring: workout (circumference 942.48, 70 % filled) -->
+	<circle cx="256" cy="256" r="150" fill="none" stroke="#3A3A3C" stroke-width="28" />
+	<circle cx="256" cy="256" r="150" fill="none" stroke="#8E8E93" stroke-width="28" stroke-dasharray="659.7 942.48" transform="rotate(-90 256 256)" />
+	<!-- inner ring: exercise (circumference 691.15, 40 % filled) -->
+	<circle cx="256" cy="256" r="110" fill="none" stroke="#2C2C2E" stroke-width="22" />
+	<circle cx="256" cy="256" r="110" fill="none" stroke="#FFFFFF" stroke-width="22" stroke-dasharray="276.5 691.15" transform="rotate(-90 256 256)" />
+</svg>

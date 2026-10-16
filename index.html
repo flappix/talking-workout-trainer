@@ -3,6 +3,21 @@
 	<head>
 		<meta charset="utf-8" />
 		<title>Talking Workout Trainer</title>
+
+		<!-- progressive web app: installable (add to home screen) and offline -->
+		<link rel="manifest" href="manifest.json" />
+		<link rel="icon" href="resources/icon.svg" type="image/svg+xml" />
+		<link rel="apple-touch-icon" href="resources/icon-180.png" />
+		<meta name="theme-color" content="#F2F2F5" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-title" content="Workout" />
+		<script>
+			// service workers only run over https or on localhost
+			if ('serviceWorker' in navigator) {
+				navigator.serviceWorker.register ('sw.js').catch ( error => console.warn ('service worker not registered', error) );
+			}
+		</script>
+
 		<script src="lib/lodash.min.js"></script>
 		<script defer src="lib/alpine.min.js"></script>
 		<script src="lib/Speakit1.0.1.min.js"></script>
@@ -52,6 +67,13 @@
 				margin-top: 2rem;
 				padding-top: 1rem;
 				border-top: 1px solid #A0A0A0;
+			}
+
+			error_message {
+				display: block;
+				margin: 0.5rem 0 1rem 0;
+				padding: 1rem;
+				border-left: 0.5rem solid #D70015;
 			}
 
 			navigation button  {
@@ -120,27 +142,20 @@
 				padding: 0.5rem 1rem;
 			}
 			
-			exercise_timer {
-				font-size: 4rem;
-				text-align: center;
-				width: 20vh;
-				height: 20vh;
-				display: flex;
-				align-items: center;
-				justify-content: space-around;
-				position: relative;
-				border-radius: 50%;
-			}
-			
+			/* progress rings (svg), sized by the smaller screen side */
 			workout_timer {
-				font-size: 4rem;
-				text-align: center;
-				width: 24vh;
-				height: 24vh;
-				display: flex;
-				align-items: center;
-				justify-content: space-around;
-				position: relative;
+				display: block;
+				width: min(70vw, 40vh);
+				height: min(70vw, 40vh);
+			}
+
+			workout_timer svg {
+				width: 100%;
+				height: 100%;
+			}
+
+			workout_timer circle {
+				fill: none;
 			}
 			
 			value {
@@ -164,30 +179,6 @@
 			h3 {
 				font-size: 4rem;
 			}
-
-			@keyframes prixClipFix_exercise {
-				0%   {clip-path:polygon(50% 50%,0 0,0 0,0 0,0 0,0 0)}
-				25%  {clip-path:polygon(50% 50%,0 0,100% 0,100% 0,100% 0,100% 0)}
-				50%  {clip-path:polygon(50% 50%,0 0,100% 0,100% 100%,100% 100%,100% 100%)}
-				75%  {clip-path:polygon(50% 50%,0 0,100% 0,100% 100%,0 100%,0 100%)}
-				100% {clip-path:polygon(50% 50%,0 0,100% 0,100% 100%,0 100%,0 0)}
-			}
-			
-			@keyframes prixClipFix_workout {
-				0%   {clip-path:polygon(50% 50%,0 0,0 0,0 0,0 0,0 0)}
-				25%  {clip-path:polygon(50% 50%,0 0,100% 0,100% 0,100% 0,100% 0)}
-				50%  {clip-path:polygon(50% 50%,0 0,100% 0,100% 100%,100% 100%,100% 100%)}
-				75%  {clip-path:polygon(50% 50%,0 0,100% 0,100% 100%,0 100%,0 100%)}
-				100% {clip-path:polygon(50% 50%,0 0,100% 0,100% 100%,0 100%,0 0)}
-			}
-		</style>
-		
-		<!-- exercise timer animation: document.styleSheets[1] -->
-		<style>
-		</style>
-		
-		<!-- workout timer animation: document.styleSheets[2] -->
-		<style>
 		</style>
 	</head>
 
@@ -204,8 +195,16 @@
 					box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 				}
 
-				exercise_timer {
-					background-color: white;
+				.ring_track {
+					stroke: #E5E5EA;
+				}
+
+				.ring_workout {
+					stroke: #8E8E93;
+				}
+
+				.ring_exercise {
+					stroke: #1C1C1E;
 				}
 
 				table tr td {
@@ -235,6 +234,11 @@
 				label {
 					border: 1px solid #D1D1D6;
 				}
+
+				error_message {
+					background-color: #FFECEC;
+					color: #8A1C12;
+				}
 			</style>
 		</template>
 		
@@ -254,8 +258,16 @@
 					background-color: #1C1C1E;
 				}
 
-				exercise_timer {
-					background-color: black;
+				.ring_track {
+					stroke: #1C1C1E;
+				}
+
+				.ring_workout {
+					stroke: #48484A;
+				}
+
+				.ring_exercise {
+					stroke: #D2D2D2;
 				}
 
 				table tr td {
@@ -279,11 +291,21 @@
 				label {
 					border: 1px solid #333333;
 				}
+
+				error_message {
+					background-color: #2A0F0D;
+					color: #FF9F96;
+				}
 			</style>
 		</template>
 		
 		<template x-if="state != 'not_init'">
 			<div>
+				<template x-if="voices.length == 0">
+					<error_message>
+						Speech output is not supported in this browser. Workouts will run without voice announcements.
+					</error_message>
+				</template>
 				<template x-if="panel == 'run' && ['not_started', 'finished'].includes (state)">
 					<navigation>
 						<button @click="stop_workout(); panel = 'create'; curr_workout = null;" x-show="panel != 'create'">+ workout</button>
@@ -411,7 +433,7 @@
 											:disabled="e >= temp_workout.exercises.length - 1"
 											title="move exercise down">&#8595;</button>
 									<button @click="temp_workout.exercises.splice (e, 0, _.cloneDeep (exercise) ); setTimeout ( () => document.getElementById (`exercise_${e + 1}`).scrollIntoView ({behavior: 'smooth'}), 200 );"
-									        title="duplicate exercise">&#x2398;</button>
+										title="duplicate exercise">&#x2398;</button>
 									<button @click="temp_workout.exercises.splice (e, 1)"
 											title="delete exercise">&#128465;</button>
 								</div>
@@ -500,8 +522,21 @@
 							<template x-if="curr_exercise.period == 'rest'">
 								<h3>Rest</h3>
 							</template>
-							<workout_timer id="workout_timer">
-								<exercise_timer id="exercise_timer" x-text="Math.max (0, Math.ceil (curr_exercise.remaining_time / 1000) )"></exercise_timer>
+							<!-- outer ring: workout, inner ring: current exercise / rest; r = 15.9155 makes the circumference 100 -->
+							<workout_timer>
+								<svg viewBox="0 0 42 42">
+									<circle class="ring_track" cx="21" cy="21" r="15.9155" stroke-width="3" />
+									<circle class="ring_workout" cx="21" cy="21" r="15.9155" stroke-width="3" stroke-dasharray="100" transform="rotate(-90 21 21)"
+										:style="{'stroke-dashoffset': `${100 - workout_progress() * 100}px`}" />
+									<g transform="translate(21 21) scale(0.78) translate(-21 -21)">
+										<circle class="ring_track" cx="21" cy="21" r="15.9155" stroke-width="3" />
+										<!-- smooth only in normal mode: animates to the value of the next tick (see exercise_progress) -->
+										<circle class="ring_exercise" cx="21" cy="21" r="15.9155" stroke-width="3" stroke-dasharray="100" transform="rotate(-90 21 21)"
+											:style="{'stroke-dashoffset': `${100 - exercise_progress() * 100}px`, 'transition': exercise_ring_transition()}" />
+									</g>
+									<text x="21" y="21" text-anchor="middle" dominant-baseline="central" font-size="9" fill="currentColor"
+										x-text="Math.max (0, Math.ceil (curr_exercise.remaining_time / 1000) )"></text>
+								</svg>
 							</workout_timer>
 							<template x-if="get_curr_workout().exercises.length - 1 > curr_exercise.exercise">
 								<div style="text-align: center; font-size: 3rem;">

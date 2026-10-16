@@ -3,7 +3,7 @@ function App() {
 	return {
 		init: function() {
 			let workouts = this.load_stored_workouts();
-			Speakit.getVoices().then ( voices => {
+			this.load_voices().then ( voices => {
 				this.voices = voices;
 
 				this.workouts = workouts != null ? workouts : get_demo_workouts (this.voices);
@@ -79,6 +79,23 @@ function App() {
 			}
 
 			return workouts;
+		},
+		voices: [],
+		// resolves with the available voices, or [] if speech is not supported, so the app always starts
+		load_voices: function() {
+			// Speakit extends SpeechSynthesis, so it is not defined at all in browsers without speech support
+			if ( typeof Speakit == 'undefined' || !('speechSynthesis' in window) ) {
+				return Promise.resolve ([]);
+			}
+
+			let voices = Speakit.getVoices();
+
+			// some browsers deliver the voices late: take them whenever they arrive
+			voices.then ( v => { if (v.length > 0) this.voices = v; } ).catch ( () => {} );
+
+			// getVoices() never resolves if the browser has no voices, so don't wait forever
+			let timeout = new Promise ( resolve => setTimeout ( () => resolve ([]), 3000 ) );
+			return Promise.race ([voices, timeout]).catch ( () => [] );
 		},
 		find_best_voice: function() {
 			for (let config of [['name', 'Aaron'], ['name', 'Fred'], ['lang', 'en-US']]) {
@@ -168,7 +185,7 @@ function App() {
 		},
 		cancel_edit_workout: function() {
 			let has_changed = ( this.edit_workout == null && !_.isEqual (this.temp_workout, this.workout_template) ) || // new workout
-							  ( this.edit_workout != null && !_.isEqual ( _.cloneDeep (this.workouts[this.edit_workout]), this.temp_workout ) ); // edit workout
+								( this.edit_workout != null && !_.isEqual ( _.cloneDeep (this.workouts[this.edit_workout]), this.temp_workout ) ); // edit workout
 			if ( !has_changed || confirm ('Are you sure you want to exit the workout editor? Your workout will not be saved') ) {
 				this.curr_workout = localStorage.getItem ('last_workout') || 0;
 				this.reset_temp_workout();
@@ -198,6 +215,7 @@ function App() {
 		last_countdown: Infinity,
 		phase_end: null, // timestamp when the current phase (pre-delay, work, rest) ends, null until the timer runs
 		speech_lead: 300, // countdown numbers are spoken this many ms early to compensate the speech delay (iOS)
+		tick_margin: 5, // ticks fire this many ms after a second boundary, since timers can fire slightly early
 		run_timer: null,
 		run_id: 0, // incremented on start and quit, so stale run loops and start callbacks stop
 		// schedule the next tick at the next full second (display, phase change) or countdown announcement
@@ -209,13 +227,14 @@ function App() {
 			let delay = remaining <= 0 ? 0 : Math.min ( until_next (remaining), until_next (remaining - this.speech_lead) );
 
 			let run_id = this.run_id;
-			this.run_timer = setTimeout ( () => { this.run (run_id); }, delay + 5 );
+			this.run_timer = setTimeout ( () => { this.run (run_id); }, delay + this.tick_margin );
+			this.ring_lead = delay + this.tick_margin; // the smooth ring arrives exactly with the tick
 		},
 		// start the next phase where the last one ended (not now), so late ticks don't add up
 		start_phase: function (period, now) {
 			this.phase_end += period;
 			this.curr_exercise.remaining_time = this.phase_end - now;
-			this.update_progressbar ('exercise', period, period - this.curr_exercise.remaining_time);
+			this.reset_ring (period);
 		},
 		run: function (run_id) {
 			if (run_id != this.run_id || this.pause) {
@@ -228,6 +247,7 @@ function App() {
 			let curr_workout = this.get_curr_workout();
 			let exercises = this.get_exercises();
 			this.curr_exercise.remaining_time = this.phase_end - now;
+			this.ring_smooth = true;
 
 			// countdown
 			let remain = Math.ceil ( (this.curr_exercise.remaining_time - this.speech_lead) / 1000 );
@@ -246,10 +266,6 @@ function App() {
 					this.readText (`go! ${exercises[this.curr_exercise.exercise].name}`);
 					this.state = 'running';
 					this.start_phase (this.get_work_period(), now);
-
-					// the workout started when the pre-delay ended (possibly a bit before this tick)
-					this.update_progressbar ( 'workout', this.getWorkoutDuration (curr_workout), this.get_work_period() - this.curr_exercise.remaining_time );
-
 					this.last_countdown = Infinity;
 				}
 				else if (this.curr_exercise.period == 'work' && curr_workout.exercises.length - 1 > this.curr_exercise.exercise) {
@@ -260,7 +276,7 @@ function App() {
 						let next_speak = () => this.readText (`${this.curr_exercise.exercise < curr_workout.exercises.length - 2 ? 'Next' : 'Last'} exercise: ${exercises[this.curr_exercise.exercise + 1].name}`);
 
 						if ( this.get_rest_period (curr_workout, exercises[this.curr_exercise.exercise]) > 1 && curr_workout.exercises.length - 1 > this.curr_exercise.exercise &&
-							 Math.round (curr_workout.exercises.length / 2) - 1 == this.curr_exercise.exercise )
+								Math.round (curr_workout.exercises.length / 2) - 1 == this.curr_exercise.exercise )
 						{
 							this.readText ('Half way there').then ( () => next_speak() );
 						}
@@ -283,8 +299,6 @@ function App() {
 					else {
 						this.readText ('Workout finished');
 						this.state = 'finished';
-						this.stop_animation ('exercise');
-						this.stop_animation ('workout');
 						curr_workout.completed = (curr_workout.completed ?? 0) + 1;
 						this.store();
 
@@ -352,6 +366,7 @@ function App() {
 			this.state = 'pre_delay';
 			this.pause = false;
 			this.phase_end = null;
+			this.reset_ring (this.curr_exercise.remaining_time);
 
 			this.nosleep.enable();
 
@@ -363,7 +378,6 @@ function App() {
 				}
 
 				this.phase_end = Date.now() + this.curr_exercise.remaining_time;
-				this.update_progressbar ('exercise', this.curr_exercise.remaining_time);
 				this.run (run_id); // does nothing while paused, continuing restarts the timer
 			};
 			
@@ -381,18 +395,7 @@ function App() {
 		pause: false,
 		pause_workout: function() {
 			this.pause = !this.pause;
-			
-			if (!this.energy_saving_mode) {
-				if (document.styleSheets[1].cssRules[0]) {
-					document.styleSheets[1].cssRules[0].style.animationPlayState = this.pause ? 'paused' : 'running';
-				}
-				
-				// catch pre_delay phase
-				if (document.styleSheets[2].cssRules.length > 0) {
-					document.styleSheets[2].cssRules[0].style.animationPlayState = this.pause ? 'paused' : 'running';
-				}
-			}
-			
+
 			if (this.pause) {
 				this.nosleep.disable();
 			}
@@ -407,10 +410,12 @@ function App() {
 					// stop the timer while paused and remember the remaining time
 					clearTimeout (this.run_timer);
 					this.curr_exercise.remaining_time = this.phase_end - Date.now();
+					this.ring_smooth = false; // stop the ring where it is
 				}
 				else {
 					this.phase_end = Date.now() + this.curr_exercise.remaining_time;
 					this.schedule_run();
+					this.smooth_ring_soon();
 				}
 			}
 		},
@@ -428,11 +433,10 @@ function App() {
 			this.run_id++; // stops the run loop and a pending start
 			clearTimeout (this.run_timer);
 			this.phase_end = null;
-			this.stop_animation ('exercise');
-			this.stop_animation ('workout');
 			this.curr_exercise.exercise = 0;
 			this.curr_exercise.period = 'work';
 			this.curr_exercise.remaining_time = this.get_curr_workout().settings.pre_delay * 1000;
+			this.reset_ring (this.curr_exercise.remaining_time);
 			this.state = 'not_started';
 			this.pause = false;
 			this.last_countdown = Infinity;
@@ -454,69 +458,56 @@ function App() {
 			let exercises = this.get_exercises (workout);
 			return exercises.reduce ( (sum, x, i) => i < from ? sum : sum + this.get_work_period (workout, x) + ( i < exercises.length - 1 ? this.get_rest_period (workout, x) : 0 ) , 0 );
 		},
-		// time: total duration of the animation, elapsed: how much of it has already passed
-		update_progressbar: function (type, time, elapsed = 0) {
-			if (!this.energy_saving_mode) {
-				let style = document.styleSheets[type == 'exercise' ? 1 : 2];
-				if (style.cssRules.length > 0) {
-					this.stop_animation (type);
-				}
-
-				// negative delay starts the animation part way through
-				let animation = `animation: prixClipFix_${type} ${time / 1000}s linear ${-elapsed / 1000}s 1;
-					animation-play-state: ${this.pause ? 'paused' : 'running'};`;
-
-				if (type == 'exercise') {
-					style.addRule ('exercise_timer::before',`content: "";
-						box-sizing: border-box;
-						position: absolute;
-						inset: 0px;
-						border-radius: 50%;
-						border: 1rem solid black;
-						transform: rotate(45deg);
-						${animation}`
-					);
-				}
-				else // workout
-				{
-					style.addRule ('workout_timer::before', `
-						content: "";
-						box-sizing: border-box;
-						position: absolute;
-						inset: 0px;
-						border-radius: 50%;
-						border: 1rem solid #616161;
-						transform: rotate(45deg);
-						${animation}
-					`);
-				}
-			}
+		// progress rings: computed from the timer state, so they follow pause, skip and quit automatically
+		phase_duration: 0, // length of the current phase (pre-delay, work, rest) in ms
+		ring_smooth: false, // false right after a phase starts or on pause, so the ring jumps instead of animating backwards
+		ring_lead: 0, // ms until the next tick
+		reset_ring: function (duration) {
+			this.phase_duration = duration;
+			this.ring_smooth = false;
+			this.smooth_ring_soon();
 		},
-		stop_animation: function (type) {
-			if (!this.energy_saving_mode) {
-				let style = document.styleSheets[type == 'exercise' ? 1 : 2];
-				if (style.cssRules.length > 0) {
-					style.removeRule (0);
-				}
-				
-				for ( let anim of document.getAnimations() ) {
-					// getAnimations() also returns CSS transitions (e.g. buttons), which have no animationName
-					if ( anim instanceof CSSAnimation && anim.animationName.includes (type) ) {
-						anim.cancel();
-					}
-				}
-				
-				let element = document.getElementById (type + '_timer');
-				if (element) {
-					element.style.animation = 'none';
-					element.offsetHeight; /* trigger reflow */
-					element.style.animation = null; 
-				}
+		// switch smoothing on after the ring has been drawn at its new position without transition
+		smooth_ring_soon: function() {
+			setTimeout ( () => { this.ring_smooth = true; }, 50 );
+		},
+		is_ring_smooth: function() {
+			return this.ring_smooth && !this.energy_saving_mode && !this.pause && this.phase_end != null;
+		},
+		exercise_progress: function() {
+			if (this.phase_duration <= 0) {
+				return 0;
 			}
+
+			// when smooth, show the value of the next tick and animate there until the tick happens,
+			// so the ring arrives at the same time as the number
+			let remaining = this.curr_exercise.remaining_time - ( this.is_ring_smooth() ? this.ring_lead : 0 );
+			return Math.min ( 1, Math.max ( 0, 1 - remaining / this.phase_duration ) );
+		},
+		exercise_ring_transition: function() {
+			return this.is_ring_smooth() ? `stroke-dashoffset ${this.ring_lead}ms linear` : 'none';
+		},
+		workout_progress: function() {
+			if (this.state != 'running') {
+				return 0;
+			}
+
+			let workout = this.get_curr_workout();
+			let exercises = this.get_exercises();
+			let e = this.curr_exercise.exercise;
+
+			// remaining: current phase + rest after the current exercise (if still working) + all following exercises
+			let remaining = Math.max (0, this.curr_exercise.remaining_time) + this.getWorkoutDuration (workout, e + 1);
+			if (this.curr_exercise.period == 'work' && e < exercises.length - 1) {
+				remaining += this.get_rest_period (workout, exercises[e]);
+			}
+
+			let total = this.getWorkoutDuration (workout);
+			return total > 0 ? Math.min ( 1, Math.max (0, 1 - remaining / total) ) : 0;
 		},
 		secondsToTime: function(e) {
 			const m = Math.floor(e % 3600 / 60).toString().padStart(2,'0'),
-				  s = Math.floor(e % 60).toString().padStart(2,'0');	
+					s = Math.floor(e % 60).toString().padStart(2,'0');	
 			return m + ':' + s;
 		},
 		
@@ -527,12 +518,17 @@ function App() {
 				return Promise.resolve();
 			}
 
-			this.reading = true;
 			if (workout == null) {
 				workout = this.get_curr_workout();
 			}
 
-			let voice = this.voices[this.get_voice (workout.settings.voice)];
+			// no voices available (e.g. some Android / Firefox setups): run the workout without speech
+			let voice = this.voices?.[this.get_voice (workout.settings.voice)];
+			if (voice == null) {
+				return Promise.resolve();
+			}
+
+			this.reading = true;
 			return Speakit.readText (text, voice.lang, voice.name)
 				.catch ( error => console.error ('speech failed', error) )
 				.finally ( () => { this.reading = false; } );
@@ -575,14 +571,8 @@ function App() {
 				if (!this.pause) {
 					this.schedule_run(); // realign the ticks to the new phase
 				}
+				this.reset_ring (this.curr_exercise.remaining_time);
 
-				this.update_progressbar ('exercise', this.curr_exercise.remaining_time);
-
-				// continue the workout ring at the position of the new exercise
-				let workout = this.get_curr_workout();
-				let total = this.getWorkoutDuration (workout);
-				this.update_progressbar ( 'workout', total, total - this.getWorkoutDuration (workout, new_exercise) );
-				
 				this.last_countdown = Infinity;
 				
 				this.readText ( this.get_exercises()[this.curr_exercise.exercise].name );
