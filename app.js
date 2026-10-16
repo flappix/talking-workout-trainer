@@ -495,6 +495,95 @@ function App() {
 			}
 		},
 		
+		validate_backup: null,
+		download_backup: function() {
+			let _workouts = _.cloneDeep (this.workouts);
+			for (let w of _workouts) {
+				if ('shuffle_exercises' in w) {
+					delete w.shuffle_exercises;
+				}
+			}
+
+			let backup = {
+				app: 'talking-workout-trainer',
+				version: 1,
+				created: new Date().toISOString(),
+				last_workout: this.curr_workout,
+				workouts: _workouts
+			};
+
+			let blob = new Blob ([JSON.stringify (backup, null, 2)], {type: 'application/json'});
+			let url = URL.createObjectURL (blob);
+			let link = document.createElement ('a');
+			link.href = url;
+			link.download = `workouts_${new Date().toISOString().slice (0, 10)}.json`;
+			document.body.appendChild (link);
+			link.click();
+			document.body.removeChild (link);
+			setTimeout ( () => URL.revokeObjectURL (url), 1000 );
+		},
+		restore_backup: function (event) {
+			let file = event.target.files[0];
+			event.target.value = ''; // allow selecting the same file again
+			if (!file) {
+				return;
+			}
+
+			let reader = new FileReader();
+			reader.onload = () => {
+				let backup;
+				try {
+					backup = JSON.parse (reader.result);
+				}
+				catch (e) {
+					alert ('Restore failed: the file is not valid JSON');
+					return;
+				}
+
+				// accept a backup object or a plain array of workouts
+				let workouts = Array.isArray (backup) ? backup : backup?.workouts;
+
+				if (this.validate_backup == null) {
+					this.validate_backup = new ajv7().compile ( get_backup_schema() );
+				}
+				if ( !this.validate_backup (workouts) ) {
+					let error = this.validate_backup.errors[0];
+					alert (`Restore failed: invalid backup file\n\nworkouts${error.instancePath} ${error.message}`);
+					return;
+				}
+
+				// fill in missing settings
+				for (let w of workouts) {
+					w.settings = Object.assign ( _.cloneDeep (this.workout_template.settings), w.settings );
+				}
+
+				// skip workouts which already exist (ignoring the completed counter)
+				let compare = w => _.omit (w, ['completed', 'shuffle_exercises']);
+				let new_workouts = [];
+				for (let w of workouts) {
+					if ( ![...this.workouts, ...new_workouts].some ( existing => _.isEqual ( compare (existing), compare (w) ) ) ) {
+						new_workouts.push (w);
+					}
+				}
+
+				if (new_workouts.length == 0) {
+					alert ('Nothing to restore: all workouts in the file already exist');
+					return;
+				}
+
+				let skipped = workouts.length - new_workouts.length;
+				let skipped_str = skipped > 0 ? `\n(${skipped} already existing workout${skipped != 1 ? 's' : ''} will be skipped)` : '';
+				if ( !confirm (`Add ${new_workouts.length} workout${new_workouts.length != 1 ? 's' : ''} from backup?${skipped_str}`) ) {
+					return;
+				}
+
+				this.workouts.push (...new_workouts);
+				this.store();
+			};
+			reader.onerror = () => alert ('Restore failed: the file could not be read');
+			reader.readAsText (file);
+		},
+
 		energy_saving_mode: false,
 		toggleEnergySavingMode: function() {
 			this.energy_saving_mode = !this.energy_saving_mode;

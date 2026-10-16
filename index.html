@@ -8,8 +8,10 @@
 		<script src="lib/Speakit1.0.1.min.js"></script>
 		<script src="lib/NoSleep.min.js"></script>
 		<script src="lib/howler.min.js"></script>
-		
+		<script src="lib/ajv7.min.js"></script>
+
 		<script src="demo_workouts.js"></script>
+		<script src="backup_schema.js"></script>
 		<script src="app.js"></script>
 		<style>
 			body {
@@ -34,6 +36,13 @@
 				height: 20%;
 			}
 			
+			backup_panel {
+				display: block;
+				margin-top: 2rem;
+				padding-top: 1rem;
+				border-top: 1px solid #A0A0A0;
+			}
+
 			navigation button  {
 				flex: 1;
 			}
@@ -278,6 +287,15 @@
 								</tr>
 							</template>
 						</table>
+
+						<backup_panel>
+							<h3>Backup</h3>
+							<div style="display: flex; flex-wrap: wrap; justify-content: center;">
+								<button title="download all workouts as JSON file" @click="download_backup()">&#11015; Download</button>
+								<button title="restore workouts from JSON file" @click="$refs.backup_file.click()">&#11014; Restore</button>
+								<input x-ref="backup_file" type="file" accept=".json,application/json" style="display: none;" @change="restore_backup ($event)" />
+							</div>
+						</backup_panel>
 					</box>
 				</template>
 				<template x-if="panel == 'create' || panel == 'edit'">
