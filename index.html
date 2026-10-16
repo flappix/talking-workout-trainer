@@ -7,7 +7,6 @@
 		<script defer src="lib/alpine.min.js"></script>
 		<script src="lib/Speakit1.0.1.min.js"></script>
 		<script src="lib/NoSleep.min.js"></script>
-		<script src="lib/howler.min.js"></script>
 		<script src="lib/ajv7.min.js"></script>
 
 		<script src="demo_workouts.js"></script>
@@ -15,20 +14,32 @@
 		<script src="app.js"></script>
 		<style>
 			body {
-				font-family: Arial;
+				font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 				font-size: 2rem;
 				height: 100vh;
+				margin: 0;
+				padding: 1rem;
+				box-sizing: border-box;
 			}
-			
+
 			table {
 				width: 100%;
 				font-size: 4rem;
+				border-spacing: 0 1rem;
 			}
-			
+
+			table td:first-child {
+				border-radius: 1rem 0 0 1rem;
+			}
+
+			table td:last-child {
+				border-radius: 0 1rem 1rem 0;
+			}
+
 			box {
 				display: block;
-				border-radius: 5px;
-				padding: 0.5rem;
+				border-radius: 1.5rem;
+				padding: 1rem;
 			}
 			
 			navigation {
@@ -58,13 +69,30 @@
 			
 			button {
 				cursor: pointer;
+				border: none;
+				font-weight: 600;
+				transition: transform 0.1s, opacity 0.2s;
 			}
-			
+
+			button:active:not(:disabled) {
+				transform: scale(0.96);
+			}
+
+			button:disabled {
+				opacity: 0.4;
+				cursor: default;
+			}
+
 			button, label, input {
-				border-radius: 0.5rem;
+				border-radius: 1rem;
 				margin: 0.5rem;
 				padding: 1rem;
 				font-size: 4rem;
+				font-family: inherit;
+			}
+
+			input {
+				border: 1px solid;
 			}
 			
 			select {
@@ -88,8 +116,8 @@
 				display: flex;
 				align-items: center;
 				justify-content: space-between;
-				border-radius: 5px;
-				padding: 0.5rem;
+				border-radius: 1rem;
+				padding: 0.5rem 1rem;
 			}
 			
 			exercise_timer {
@@ -117,9 +145,9 @@
 			
 			value {
 				background-color: #AFAFAF;
-				border-radius: 20px;
+				border-radius: 999px;
 				font-size: 3rem;
-				padding: 0.5rem;
+				padding: 0.25rem 1rem;
 				font-family: Monospace;
 			}
 			
@@ -167,30 +195,45 @@
 		<template x-if="!energy_saving_mode">
 			<style>
 				body {
-					background-color: #E4E4E4;
-					color: black;
+					background-color: #F2F2F5;
+					color: #1C1C1E;
 				}
-				
+
 				box {
 					background-color: white;
-					border: 1px solid black;
+					box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 				}
-				
+
 				exercise_timer {
 					background-color: white;
 				}
-				
-				table tr {
-					background-color: #D8D8D8;
+
+				table tr td {
+					background-color: #F2F2F5;
+				}
+
+				table tr:active td {
+					background-color: #E5E5EA;
+				}
+
+				value {
+					background-color: #1C1C1E;
 					color: white;
 				}
-				
-				value {
-					background-color: black;
+
+				button {
+					background-color: #E5E5EA;
+					color: #1C1C1E;
+					border: 2px solid #C7C7CC;
 				}
-				
+
+				input {
+					background-color: white;
+					border-color: #C7C7CC;
+				}
+
 				label {
-					border: 2px solid black;
+					border: 1px solid #D1D1D6;
 				}
 			</style>
 		</template>
@@ -204,28 +247,37 @@
 				
 				box {
 					background-color: black;
-					border: 1px solid white;
+					border: 1px solid #333333;
 				}
-				
+
 				value {
-					background-color: black;
+					background-color: #1C1C1E;
 				}
-				
+
 				exercise_timer {
 					background-color: black;
 				}
-				
+
 				table tr td {
 					background-color: black;
-					border: 1px solid #D2D2D2;
+					border-top: 1px solid #333333;
+					border-bottom: 1px solid #333333;
 				}
-				
+
 				button {
-					background-color: #313131;
+					background-color: #2C2C2E;
 					color: #D2D2D2;
+					border: 2px solid #48484A;
 				}
+
+				input {
+					background-color: #1C1C1E;
+					color: #D2D2D2;
+					border-color: #333333;
+				}
+
 				label {
-					border: 2px solid white;
+					border: 1px solid #333333;
 				}
 			</style>
 		</template>
@@ -250,10 +302,10 @@
 							<template x-for="(workout, w) in workouts" :key="w">
 								<tr :style="{'background-color': mousedown == w ? '#A0A0A0' : 'none'}">
 									<td style="padding: 0.5rem; cursor: pointer;"
-										x-html="workout.name"
+										x-text="workout.name"
 										@mousedown="mousedown = w;"
 										@mouseup="mousedown = null;"
-										@click="load_workout (w)"></td>
+										@click="load_workout (w)">
 									</td>
 									<td style="display: flex; flex-direction: column; align-items: start; justify-content: center;">
 										<div style="margin: 0; padding: 0; white-space: nowrap; margin: 1rem;">
@@ -266,7 +318,7 @@
 										</div>
 										
 										<div style="white-space: nowrap; margin: 1rem;">
-											<value><span x-html="workout.completed ?? 0"></span>x</value>
+											<value><span x-text="workout.completed ?? 0"></span>x</value>
 											completed
 										</div>
 									</td>
@@ -275,11 +327,11 @@
 										<div style="display: flex; flex-wrap: wrap;">
 											<button title="delete workout" @click="delete_workout (w)" :disabled="workouts.length < 2">&#128465;</button>
 
-											<button title="duplicate workout" @click="workouts.splice (w, 0, _.cloneDeep (workout) ); store();">&#x2398;</button>
+											<button title="duplicate workout" @click="duplicate_workout (w)">&#x2398;</button>
 											
 											<div>
 												<button x-show="!shared" @click="shared = true;"><img src="resources/share-fill.svg" width="50" /></button>
-												<button x-show="shared" @click="$refs.share_link.select(); document.execCommand ('copy')">Copy link</button>
+												<button x-show="shared" @click="navigator.clipboard.writeText ($refs.share_link.value)">Copy link</button>
 												<input x-ref="share_link" style="width: 20vw;" type="text" x-show="shared" :value="window.location.href.split('?')[0] + '?share_workout=' + encodeURIComponent ( JSON.stringify ( _.omit (workout, ['completed']) ) )">
 											</div>
 										</div>
@@ -335,7 +387,7 @@
 										Speaker
 										<select x-model="temp_workout.settings.voice">
 											<template x-for="(voice, v) in voices" :key="v">
-												<option :value="voice.name" x-html="`${voice.name} (${voice.lang})`" :selected="get_voice (temp_workout.settings.voice) == v"></option>
+												<option :value="voice.name" x-text="`${voice.name} (${voice.lang})`" :selected="get_voice (temp_workout.settings.voice) == v"></option>
 											</template>
 										</select>
 									</label>
@@ -437,10 +489,10 @@
 				</template>
 				<template x-if="panel == 'run'">
 					<run_panel>
-						<h2 x-html="get_curr_workout().name"></h2>
+						<h2 x-text="get_curr_workout().name"></h2>
 						<div style="flex-direction: column; align-items: center;" :style="{display: is_running() ? 'flex' : 'none'}">
 							<template x-if="state =='running' && curr_exercise.period == 'work'">
-								<h3 x-html="get_exercises()[curr_exercise.exercise].name"></h3>
+								<h3 x-text="get_exercises()[curr_exercise.exercise].name"></h3>
 							</template>
 							<template x-if="state =='pre_delay' && curr_exercise.period == 'work'">
 								<h3>Get ready</h3>
@@ -449,11 +501,11 @@
 								<h3>Rest</h3>
 							</template>
 							<workout_timer id="workout_timer">
-								<exercise_timer id="exercise_timer" x-html="Math.round (curr_exercise.remaining_time / 1000)"></exercise_timer>
+								<exercise_timer id="exercise_timer" x-text="Math.max (0, Math.ceil (curr_exercise.remaining_time / 1000) )"></exercise_timer>
 							</workout_timer>
 							<template x-if="get_curr_workout().exercises.length - 1 > curr_exercise.exercise">
 								<div style="text-align: center; font-size: 3rem;">
-									Next exercise: <span x-html="get_exercises()[curr_exercise.exercise + (state == 'pre_delay' ? 0 : 1)].name"></span>
+									Next exercise: <span x-text="get_exercises()[curr_exercise.exercise + (state == 'pre_delay' ? 0 : 1)].name"></span>
 									
 								</div>
 							</template>

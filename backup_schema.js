@@ -39,7 +39,7 @@ function get_backup_schema() {
 					minItems: 1,
 					items: {
 						type: 'object',
-						required: ['name'],
+						required: ['name', 'work_period', 'rest_period'],
 						properties: {
 							name: {type: 'string'},
 							work_period: {$ref: '#/definitions/exercise_period'},
